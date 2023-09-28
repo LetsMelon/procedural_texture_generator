@@ -15,8 +15,8 @@ impl Node for BlankColor {
         &self,
         _position: &Coordinate,
         _size: &(usize, usize),
-        _input: Box<dyn InputOutputValue>,
-    ) -> Result<Box<dyn InputOutputValue>> {
-        Ok(Box::new(self.color))
+        _input: InputOutputValue,
+    ) -> Result<InputOutputValue> {
+        Ok(InputOutputValue::Pixel(self.color))
     }
 }

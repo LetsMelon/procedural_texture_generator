@@ -23,8 +23,8 @@ impl Node for Normalize {
         &self,
         _position: &Coordinate,
         _size: &(usize, usize),
-        input: Box<dyn InputOutputValue>,
-    ) -> Result<Box<dyn InputOutputValue>> {
+        input: InputOutputValue,
+    ) -> Result<InputOutputValue> {
         let raw = input.to_common_ground()?.to_raw();
 
         let values = raw
@@ -36,6 +36,6 @@ impl Node for Normalize {
         dbg!(&values);
 
         let arr = [values[0], values[1], values[2], values[3]];
-        Ok(Box::new(Pixel::new_raw(arr)) as _)
+        Ok(InputOutputValue::Pixel(Pixel::new_raw(arr)))
     }
 }

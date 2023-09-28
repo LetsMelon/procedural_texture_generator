@@ -35,14 +35,14 @@ impl Node for Noise {
         &self,
         position: &Coordinate,
         size: &(usize, usize),
-        _input: Box<dyn InputOutputValue>,
-    ) -> Result<Box<dyn InputOutputValue>> {
+        _input: InputOutputValue,
+    ) -> Result<InputOutputValue> {
         let value = self.perlin.get([
             (((position.x() as f64) / ((size.0 - 1) as f64)) + self.offset.x()) * self.scale.x(),
             (((position.y() as f64) / ((size.1 - 1) as f64)) + self.offset.y()) * self.scale.y(),
             ((position.z() as f64) + self.offset.z() as f64) * self.scale.z(),
         ]);
 
-        Ok(Box::new(value))
+        Ok(InputOutputValue::Float(value))
     }
 }

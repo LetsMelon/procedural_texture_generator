@@ -8,19 +8,14 @@ use crate::node::Node;
 #[derive(Debug)]
 pub struct Map {
     // TODO maybe use `Range` instead of `f64` and use a separate struct
-    steps: Vec<(Box<dyn InputOutputValue>, f64)>,
+    steps: Vec<(InputOutputValue, f64)>,
 }
 
 impl Map {
-    pub fn new<I: InputOutputValue + Copy + 'static>(steps: Vec<(I, f64)>) -> Self {
+    pub fn new(steps: Vec<(InputOutputValue, f64)>) -> Self {
         assert!(steps.len() >= 2);
 
-        Map {
-            steps: steps
-                .iter()
-                .map(|(inp, value)| (Box::new(*inp) as _, *value))
-                .collect(),
-        }
+        Map { steps }
     }
 }
 
@@ -29,8 +24,8 @@ impl Node for Map {
         &self,
         _position: &Coordinate,
         _size: &(usize, usize),
-        input: Box<dyn InputOutputValue>,
-    ) -> Result<Box<dyn InputOutputValue>> {
+        input: InputOutputValue,
+    ) -> Result<InputOutputValue> {
         let r = input.r_percentage()?;
         let g = input.g_percentage()?;
         let b = input.b_percentage()?;
@@ -51,9 +46,9 @@ impl Node for Map {
         }
 
         if avg < first.1 {
-            Ok(Box::new(first.0.to_common_ground()?) as _)
+            Ok(first.0.clone())
         } else if avg >= last.1 {
-            Ok(Box::new(last.0.to_common_ground()?) as _)
+            Ok(last.0.clone())
         } else {
             let v1 = [
                 first.0.r_percentage()?,
@@ -82,7 +77,7 @@ impl Node for Map {
 
             let arr = [values[0], values[1], values[2], values[3]];
 
-            Ok(Box::new(Pixel::new_raw(arr)))
+            Ok(InputOutputValue::Pixel(Pixel::new_raw(arr)))
         }
     }
 }

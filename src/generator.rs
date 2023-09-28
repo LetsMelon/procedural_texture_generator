@@ -3,6 +3,7 @@ use rusvid_core::pixel::Pixel;
 use rusvid_core::plane::Plane;
 
 use crate::coordinate::Coordinate;
+use crate::input_output_value::InputOutputValue;
 use crate::node::Node;
 
 #[derive(Debug)]
@@ -19,21 +20,15 @@ impl Generator {
 
         for x in 0..size.0 {
             for y in 0..size.0 {
-                let mut value = Pixel::ZERO;
+                let mut value = InputOutputValue::Pixel(Pixel::ZERO);
 
                 for node in &self.nodes {
-                    let p = node
-                        .generate(
-                            &Coordinate::new_xy(x as f64, y as f64),
-                            &size,
-                            Box::new(value),
-                        )?
-                        .to_common_ground()?;
+                    let p = node.generate(&Coordinate::new_xy(x as f64, y as f64), &size, value)?;
 
                     value = p;
                 }
 
-                plane.put_pixel_unchecked(x as u32, y as u32, value);
+                plane.put_pixel_unchecked(x as u32, y as u32, value.to_common_ground()?);
             }
         }
 

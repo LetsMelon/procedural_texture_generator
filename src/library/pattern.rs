@@ -13,18 +13,18 @@ impl Node for Pattern {
         &self,
         position: &Coordinate,
         _size: &(usize, usize),
-        input: Box<dyn InputOutputValue>,
-    ) -> Result<Box<dyn InputOutputValue>> {
+        input: InputOutputValue,
+    ) -> Result<InputOutputValue> {
         let p = input.to_common_ground()?;
 
         match (position.x() as usize % 2, position.y() as usize % 2) {
-            (0, 0) | (1, 1) => Ok(Box::new(Pixel::new(
+            (0, 0) | (1, 1) => Ok(InputOutputValue::Pixel(Pixel::new(
                 ((p.get_r() as f64) * 0.0) as u8,
                 ((p.get_g() as f64) * 0.0) as u8,
                 ((p.get_b() as f64) * 0.0) as u8,
                 255,
             ))),
-            _ => Ok(Box::new(Pixel::new(
+            _ => Ok(InputOutputValue::Pixel(Pixel::new(
                 ((p.get_r() as f64) * 1.0) as u8,
                 ((p.get_g() as f64) * 1.0) as u8,
                 ((p.get_b() as f64) * 1.0) as u8,

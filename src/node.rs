@@ -8,6 +8,6 @@ pub trait Node: std::fmt::Debug {
         &self,
         position: &Coordinate,
         size: &(usize, usize),
-        input: Box<dyn InputOutputValue>,
-    ) -> Result<Box<dyn InputOutputValue>>;
+        input: InputOutputValue,
+    ) -> Result<InputOutputValue>;
 }
