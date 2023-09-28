@@ -1,6 +1,7 @@
 use anyhow::Result;
 
-use crate::{Coordinate, InputOutputValue};
+use crate::coordinate::Coordinate;
+use crate::input_output_value::InputOutputValue;
 
 pub trait Node: std::fmt::Debug {
     fn generate(

@@ -17,7 +17,7 @@ impl Node for Pattern {
     ) -> Result<Box<dyn InputOutputValue>> {
         let p = input.to_common_ground()?;
 
-        match (position.x() % 2, position.y() % 2) {
+        match (position.x() as usize % 2, position.y() as usize % 2) {
             (0, 0) | (1, 1) => Ok(Box::new(Pixel::new(
                 ((p.get_r() as f64) * 0.0) as u8,
                 ((p.get_g() as f64) * 0.0) as u8,

@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
+noise = "0.8.2"
 rusvid_core = { git = "https://github.com/LetsMelon/rusvid" }

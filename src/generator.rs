@@ -12,7 +12,7 @@ pub struct Generator {
 
 impl Generator {
     pub fn generate(&self) -> Result<Plane> {
-        let side = 100;
+        let side = 1000;
         let size = (side, side);
 
         let mut plane = Plane::new(size.0 as u32, size.1 as u32)?;
@@ -23,7 +23,11 @@ impl Generator {
 
                 for node in &self.nodes {
                     let p = node
-                        .generate(&Coordinate::new_xy(x, y), &size, Box::new(value))?
+                        .generate(
+                            &Coordinate::new_xy(x as f64, y as f64),
+                            &size,
+                            Box::new(value),
+                        )?
                         .to_common_ground()?;
 
                     value = p;
