@@ -1,8 +1,6 @@
 use procedural_texture_generator::coordinate::Coordinate;
 use procedural_texture_generator::generator::Generator;
-use procedural_texture_generator::library::map::Map;
 use procedural_texture_generator::library::noise::Noise;
-use rusvid_core::prelude::Pixel;
 
 fn main() {
     let generator = Generator {

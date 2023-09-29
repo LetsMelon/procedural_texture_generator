@@ -1,5 +1,4 @@
 use anyhow::Result;
-use rusvid_core::pixel::Pixel;
 
 use crate::coordinate::Coordinate;
 use crate::input_output_value::InputOutputValue;
@@ -7,7 +6,13 @@ use crate::node::Node;
 
 #[derive(Debug)]
 pub struct BlankColor {
-    pub color: Pixel,
+    value: InputOutputValue,
+}
+
+impl BlankColor {
+    pub fn new(value: InputOutputValue) -> Self {
+        BlankColor { value }
+    }
 }
 
 impl Node for BlankColor {
@@ -17,6 +22,34 @@ impl Node for BlankColor {
         _size: &(usize, usize),
         _input: InputOutputValue,
     ) -> Result<InputOutputValue> {
-        Ok(InputOutputValue::Pixel(self.color))
+        Ok(self.value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rusvid_core::pixel::Pixel;
+
+    use super::BlankColor;
+    use crate::coordinate::Coordinate;
+    use crate::input_output_value::InputOutputValue;
+    use crate::node::Node;
+
+    #[test]
+    fn always_returns_the_same_value() {
+        let values_to_test = [
+            InputOutputValue::Float(1.0),
+            InputOutputValue::Nothing,
+            InputOutputValue::Pixel(Pixel::new(255, 0, 0, 255)),
+        ];
+
+        for value_to_test in values_to_test {
+            let node = BlankColor::new(value_to_test);
+            assert_eq!(
+                node.generate(&Coordinate::new_x(0.0), &(0, 0), InputOutputValue::Nothing)
+                    .unwrap(),
+                value_to_test
+            );
+        }
     }
 }

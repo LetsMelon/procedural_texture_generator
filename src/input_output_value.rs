@@ -1,7 +1,24 @@
 use anyhow::Result;
 use rusvid_core::pixel::Pixel;
 
-#[derive(Debug, Clone, Copy)]
+macro_rules! impl_from_t {
+    ((), $value:expr) => {
+        impl From<()> for InputOutputValue {
+            fn from(_: ()) -> Self {
+                $value
+            }
+        }
+    };
+    ($t:ty, $value:expr) => {
+        impl From<$t> for InputOutputValue {
+            fn from(value: $t) -> Self {
+                $value(value)
+            }
+        }
+    };
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InputOutputValue {
     Nothing,
     Float(f64),
@@ -62,3 +79,11 @@ impl InputOutputValue {
         Ok((p.get_a() as f64) / 255.0)
     }
 }
+
+impl_from_t!((), InputOutputValue::Nothing);
+impl_from_t!(f64, InputOutputValue::Float);
+impl_from_t!(Pixel, InputOutputValue::Pixel);
+impl_from_t!([u8; 3], InputOutputValue::U8X3Array);
+impl_from_t!([u8; 4], InputOutputValue::U8X4Array);
+impl_from_t!([f64; 3], InputOutputValue::F64X3Array);
+impl_from_t!([f64; 4], InputOutputValue::F64X4Array);
