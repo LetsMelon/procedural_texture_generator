@@ -46,9 +46,9 @@ impl Node for Map {
         }
 
         if avg < first.1 {
-            Ok(first.0.clone())
+            Ok(first.0)
         } else if avg >= last.1 {
-            Ok(last.0.clone())
+            Ok(last.0)
         } else {
             let v1 = [
                 first.0.r_percentage()?,

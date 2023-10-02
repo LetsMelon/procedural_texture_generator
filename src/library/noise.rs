@@ -38,9 +38,9 @@ impl Node for Noise {
         _input: InputOutputValue,
     ) -> Result<InputOutputValue> {
         let value = self.perlin.get([
-            (((position.x() as f64) / ((size.0 - 1) as f64)) + self.offset.x()) * self.scale.x(),
-            (((position.y() as f64) / ((size.1 - 1) as f64)) + self.offset.y()) * self.scale.y(),
-            ((position.z() as f64) + self.offset.z() as f64) * self.scale.z(),
+            (((position.x()) / ((size.0 - 1) as f64)) + self.offset.x()) * self.scale.x(),
+            (((position.y()) / ((size.1 - 1) as f64)) + self.offset.y()) * self.scale.y(),
+            ((position.z()) + self.offset.z()) * self.scale.z(),
         ]);
 
         Ok(InputOutputValue::Float(value))
