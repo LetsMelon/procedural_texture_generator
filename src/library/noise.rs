@@ -34,7 +34,7 @@ impl Node for Noise {
     fn generate(
         &self,
         position: &Coordinate,
-        size: &(usize, usize),
+        size: &(u32, u32),
         _input: InputOutputValue,
     ) -> Result<InputOutputValue> {
         let value = self.perlin.get([

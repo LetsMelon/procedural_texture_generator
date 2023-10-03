@@ -22,7 +22,7 @@ impl Node for Normalize {
     fn generate(
         &self,
         _position: &Coordinate,
-        _size: &(usize, usize),
+        _size: &(u32, u32),
         input: InputOutputValue,
     ) -> Result<InputOutputValue> {
         let raw = input.to_common_ground()?.to_raw();

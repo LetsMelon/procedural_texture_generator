@@ -7,7 +7,7 @@ pub trait Node: std::fmt::Debug {
     fn generate(
         &self,
         position: &Coordinate,
-        size: &(usize, usize),
+        size: &(u32, u32),
         input: InputOutputValue,
     ) -> Result<InputOutputValue>;
 }

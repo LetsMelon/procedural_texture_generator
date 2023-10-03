@@ -4,9 +4,26 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# [[bin]]
+# name = "ptg"
+# path = "./bin/ptg.rs"
+
+[lib]
+crate-type = ["cdylib"]
 
 [dependencies]
 anyhow = "1.0.75"
 noise = "0.8.2"
 petgraph = "0.6.4"
 rusvid_core = { git = "https://github.com/LetsMelon/rusvid" }
+# [target.'cfg(target_arch = "wasm")'.dependencies]
+wasm-bindgen = "0.2.87"
+web-sys = { version = "0.3.4", features = [
+    'ImageData',
+    'CanvasRenderingContext2d',
+    'console',
+] }
+once_cell = "1.18.0"
+
+[profile.dev.rusvid_core]
+inherit = "release"

@@ -23,7 +23,7 @@ impl Node for Map {
     fn generate(
         &self,
         _position: &Coordinate,
-        _size: &(usize, usize),
+        _size: &(u32, u32),
         input: InputOutputValue,
     ) -> Result<InputOutputValue> {
         let r = input.r_percentage()?;

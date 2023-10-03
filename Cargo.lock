@@ -614,8 +614,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "noise",
+ "once_cell",
  "petgraph",
  "rusvid_core",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

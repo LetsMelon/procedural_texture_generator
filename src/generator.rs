@@ -19,6 +19,9 @@ pub struct Generator {
     output_node: NodeIndex,
 }
 
+unsafe impl Sync for Generator {}
+unsafe impl Send for Generator {}
+
 impl Generator {
     pub fn new() -> Self {
         let mut g = Generator {
@@ -47,10 +50,9 @@ impl Generator {
             .add_edge(link.input_node, link.output_node, ())
     }
 
-    pub fn generate(&self) -> Result<Plane> {
-        let side = 100;
-        let size = (side, side);
-        let mut plane = Plane::new(size.0 as u32, size.1 as u32)?;
+    pub fn generate(&self, width: u32, height: u32) -> Result<Plane> {
+        let size = (width, height);
+        let mut plane = Plane::new(size.0, size.1)?;
 
         let mut g = self.internal_graph.clone();
         g.reverse();
