@@ -130,6 +130,76 @@ pub(crate) fn render_square(
     Ok(())
 }
 
+fn draw_circle(
+    plane: &mut Plane,
+    pos: (u32, u32),
+    color: Pixel,
+    radius: u32,
+) -> anyhow::Result<()> {
+    let radius = radius as i32;
+    let f_radius = radius as f32;
+
+    let width = plane.width();
+    let height = plane.height();
+
+    for (x, y) in ((radius * -1)..radius)
+        .cartesian_product((radius * -1)..radius)
+        .sorted_by_key(|(x, y)| x * 4157 + y * 6481)
+        .dedup()
+        .filter(|(delta_x, delta_y)| {
+            let xx = *delta_x as f32;
+            let yy = *delta_y as f32;
+
+            (xx.powf(2.0) + yy.powf(2.0)).sqrt() < f_radius
+        })
+        .map(|(delta_x, delta_y)| (pos.0 as i32 + delta_x, pos.1 as i32 + delta_y))
+        .filter(|(x, y)| !(*x < 0 || *y < 0 || *x > width as i32 || *y > height as i32))
+    {
+        plane.put_pixel(x as u32, y as u32, color)?;
+    }
+
+    Ok(())
+}
+
+fn draw_line(
+    plane: &mut Plane,
+    pos1: (u32, u32),
+    pos2: (u32, u32),
+    color: Pixel,
+    stroke_weight: u32,
+) -> anyhow::Result<()> {
+    let mut x1 = pos1.0 as i32;
+    let mut y1 = pos1.1 as i32;
+    let x2 = pos2.0 as i32;
+    let y2 = pos2.1 as i32;
+
+    let dx = (x2 - x1).abs();
+    let dy = (y2 - y1).abs();
+    let sx = if x1 < x2 { 1 } else { -1 };
+    let sy = if y1 < y2 { 1 } else { -1 };
+    let mut err = dx - dy;
+
+    while x1 != x2 || y1 != y2 {
+        if x1 > 0 && x1 <= plane.width() as i32 && y1 > 0 && y1 <= plane.height() as i32 {
+            // plane.put_pixel(x1 as u32, y1 as u32, color)?;
+            draw_circle(plane, (x1 as u32, y1 as u32), color, stroke_weight)?;
+        }
+
+        let e2 = 2 * err;
+        if e2 > -dy {
+            err -= dy;
+            x1 += sx;
+        }
+
+        if e2 < dx {
+            err += dx;
+            y1 += sy;
+        }
+    }
+
+    Ok(())
+}
+
 #[wasm_bindgen]
 pub fn move_node_to(node: usize, position_x: u32, position_y: u32) -> Result<(), JsValue> {
     println!("Move node {:?} to {:?}", &node, (position_x, position_y));
@@ -173,9 +243,60 @@ pub fn nodes(ctx: &CanvasRenderingContext2d, width: u32, height: u32) -> Result<
     let generator = get_generator();
     let mut plane = Plane::new(width, height).unwrap();
 
-    let nodes = generator.connected_nodes_to_output();
+    println!("Draw edges:");
 
-    for node in nodes {
+    for edge in generator.internal_graph.raw_edges() {
+        let source_index = edge.source();
+        let target_index = edge.target();
+
+        let source = unsafe {
+            generator
+                .internal_graph
+                .node_weight(source_index)
+                .unwrap()
+                .as_ptr()
+                .as_ref()
+                .unwrap()
+        };
+        let target = unsafe {
+            generator
+                .internal_graph
+                .node_weight(target_index)
+                .unwrap()
+                .as_ptr()
+                .as_ref()
+                .unwrap()
+        };
+
+        if source.position == target.position {
+            continue;
+        }
+
+        println!("{:?} -> {:?}", source, target);
+
+        let source_center = (
+            source.position.0 + source.size.0 / 2,
+            source.position.1 + source.size.1 / 2,
+        );
+        let target_center = (
+            target.position.0 + target.size.0 / 2,
+            target.position.1 + target.size.1 / 2,
+        );
+
+        println!("source_center: {:?}", source_center);
+        println!("target_center: {:?}", target_center);
+
+        draw_line(
+            &mut plane,
+            source_center,
+            target_center,
+            Pixel::new(15, 75, 165, 255),
+            5,
+        )
+        .unwrap();
+    }
+
+    for node in generator.connected_nodes_to_output() {
         let node = node.borrow();
 
         println!("Rendering node: {:?}", &node);

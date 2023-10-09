@@ -46,8 +46,20 @@ import("./pkg")
         initialMouseY = mouseY;
       }
     });
-    canvas.addEventListener("mouseup", () => {
+    canvas.addEventListener("mouseup", (event) => {
       console.log("mouseup");
+
+      if (dragging && selectedNode != undefined) {
+        const mouseX = event.clientX - canvas.getBoundingClientRect().left;
+        const mouseY = event.clientY - canvas.getBoundingClientRect().top;
+
+        wasm.move_node(
+          selectedNode,
+          mouseX - initialMouseX,
+          mouseY - initialMouseY
+        );
+        wasm.nodes(ctx_nodes, 500, 500);
+      }
 
       dragging = false;
       selectedNode = undefined;
@@ -56,6 +68,7 @@ import("./pkg")
     const renderBtn = document.getElementById("render");
     renderBtn.addEventListener("click", () => {
       drawCall(wasm, ctx_render);
+      wasm.nodes(ctx_nodes, 500, 500);
     });
 
     drawCall(wasm, ctx_render);
