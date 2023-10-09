@@ -26,6 +26,9 @@ use crate::link::Link;
 static mut GENERATOR: OnceCell<Generator> = OnceCell::new();
 static mut SELECTED_NODE: Option<NodeIndex> = None;
 
+#[cfg(target_arch = "wasm32")]
+#[macro_export]
+#[allow(unused)]
 macro_rules! println {
     () => {
         web_sys::console::log_0()
@@ -35,20 +38,23 @@ macro_rules! println {
     }};
 }
 
+#[cfg(target_arch = "wasm32")]
+#[macro_export]
+#[allow(unused)]
 macro_rules! dbg {
     () => {
-        println!("[{}:{}]", $crate::file!(), $crate::line!())
+        $crate::println!("[{}:{}]", $crate::file!(), $crate::line!())
     };
     ($val:expr $(,)?) => {
         match $val {
             tmp => {
-                println!("[{}:{}] {} = {:#?}", file!(), line!(), stringify!($val), &tmp);
+                $crate::println!("[{}:{}] {} = {:#?}", file!(), line!(), stringify!($val), &tmp);
                 tmp
             }
         }
     };
     ($($val:expr),+ $(,)?) => {
-        ($(dbg!($val)),+,)
+        ($($crate::dbg!($val)),+,)
     };
 }
 
