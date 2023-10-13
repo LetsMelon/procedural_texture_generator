@@ -62,13 +62,9 @@ static uint64_t font[128] = {
     0x6094681629060000,	/* % */
     0x1C20201926190000,	/* & */
     0x808000000000000,	/* ' */
-    0x810202010080000,	/* ( */
-    0x1008040408100000,	/* ) */
     0x2A1C3E1C2A000000,	/* * */
     0x8083E08080000,	/* + */
-    0x81000,		    /* , */
     0x3C00000000,		/* - */
-    0x80000,		    /* . */
     0x204081020400000,	/* / */
     0x80000080000,		/* : */
     0x80000081000,		/* ; */
@@ -90,82 +86,164 @@ static uint64_t font[128] = {
 };
  */
 #[derive(Debug)]
-#[repr(u64)]
 pub enum BitmapChar {
-    Space = 0x0,
-    ExclamationMark = 0x808080800080000,
-    Unknown = 0x0000542a542a542a,
-    Underscore = 0x7E0000,
-    Colon = 0x80000080000,
+    Space,
+    ExclamationMark,
+    Unknown,
+    Underscore,
+    Colon,
+    OpenParenthesis,
+    CloseParenthesis,
+    Point,
+    Comma,
 
-    Number0 = 0x1824424224180000,
-    Number1 = 0x8180808081C0000,
-    Number2 = 0x3C420418207E0000,
-    Number3 = 0x3C420418423C0000,
-    Number4 = 0x81828487C080000,
-    Number5 = 0x7E407C02423C0000,
-    Number6 = 0x3C407C42423C0000,
-    Number7 = 0x7E04081020400000,
-    Number8 = 0x3C423C42423C0000,
-    Number9 = 0x3C42423E023C0000,
+    Number0,
+    Number1,
+    Number2,
+    Number3,
+    Number4,
+    Number5,
+    Number6,
+    Number7,
+    Number8,
+    Number9,
 
-    UpperA = 0x1818243C42420000,
-    UpperB = 0x7844784444780000,
-    UpperC = 0x3844808044380000,
-    UpperD = 0x7844444444780000,
-    UpperE = 0x7C407840407C0000,
-    UpperF = 0x7C40784040400000,
-    UpperG = 0x3844809C44380000,
-    UpperH = 0x42427E4242420000,
-    UpperI = 0x3E080808083E0000,
-    UpperJ = 0x1C04040444380000,
-    UpperK = 0x4448507048440000,
-    UpperL = 0x40404040407E0000,
-    UpperM = 0x4163554941410000,
-    UpperN = 0x4262524A46420000,
-    UpperO = 0x1C222222221C0000,
-    UpperP = 0x7844784040400000,
-    UpperQ = 0x1C222222221C0200,
-    UpperR = 0x7844785048440000,
-    UpperS = 0x1C22100C221C0000,
-    UpperT = 0x7F08080808080000,
-    UpperU = 0x42424242423C0000,
-    UpperV = 0x8142422424180000,
-    UpperW = 0x4141495563410000,
-    UpperX = 0x4224181824420000,
-    UpperY = 0x4122140808080000,
-    UpperZ = 0x7E040810207E0000,
+    UpperA,
+    UpperB,
+    UpperC,
+    UpperD,
+    UpperE,
+    UpperF,
+    UpperG,
+    UpperH,
+    UpperI,
+    UpperJ,
+    UpperK,
+    UpperL,
+    UpperM,
+    UpperN,
+    UpperO,
+    UpperP,
+    UpperQ,
+    UpperR,
+    UpperS,
+    UpperT,
+    UpperU,
+    UpperV,
+    UpperW,
+    UpperX,
+    UpperY,
+    UpperZ,
 
-    LowerA = 0x3C023E463A0000,
-    LowerB = 0x40407C42625C0000,
-    LowerC = 0x1C20201C0000,
-    LowerD = 0x2023E42463A0000,
-    LowerE = 0x3C427E403C0000,
-    LowerF = 0x18103810100000,
-    LowerG = 0x344C44340438,
-    LowerH = 0x2020382424240000,
-    LowerI = 0x800080808080000,
-    LowerJ = 0x800180808080870,
-    LowerK = 0x20202428302C0000,
-    LowerL = 0x1010101010180000,
-    LowerM = 0x665A42420000,
-    LowerN = 0x2E3222220000,
-    LowerO = 0x3C42423C0000,
-    LowerP = 0x5C62427C4040,
-    LowerQ = 0x3A46423E0202,
-    LowerR = 0x2C3220200000,
-    LowerS = 0x1C201804380000,
-    LowerT = 0x103C1010180000,
-    LowerU = 0x2222261A0000,
-    LowerV = 0x424224180000,
-    LowerW = 0x81815A660000,
-    LowerX = 0x422418660000,
-    LowerY = 0x422214081060,
-    LowerZ = 0x3C08103C0000,
+    LowerA,
+    LowerB,
+    LowerC,
+    LowerD,
+    LowerE,
+    LowerF,
+    LowerG,
+    LowerH,
+    LowerI,
+    LowerJ,
+    LowerK,
+    LowerL,
+    LowerM,
+    LowerN,
+    LowerO,
+    LowerP,
+    LowerQ,
+    LowerR,
+    LowerS,
+    LowerT,
+    LowerU,
+    LowerV,
+    LowerW,
+    LowerX,
+    LowerY,
+    LowerZ,
 }
 
 impl BitmapChar {
     pub const CHAR_SIZE: (u32, u32) = (8, 8);
+
+    pub fn as_u64(&self) -> u64 {
+        match self {
+            BitmapChar::Space => 0x0,
+            BitmapChar::ExclamationMark => 0x808080800080000,
+            BitmapChar::Unknown => 0x0000542a542a542a,
+            BitmapChar::Underscore => 0x7E0000,
+            BitmapChar::Colon => 0x80000080000,
+            BitmapChar::OpenParenthesis => 0x810202010080000,
+            BitmapChar::CloseParenthesis => 0x1008040408100000,
+            BitmapChar::Point => 0x80000,
+            BitmapChar::Comma => 0x81000,
+
+            BitmapChar::Number0 => 0x1824424224180000,
+            BitmapChar::Number1 => 0x8180808081C0000,
+            BitmapChar::Number2 => 0x3C420418207E0000,
+            BitmapChar::Number3 => 0x3C420418423C0000,
+            BitmapChar::Number4 => 0x81828487C080000,
+            BitmapChar::Number5 => 0x7E407C02423C0000,
+            BitmapChar::Number6 => 0x3C407C42423C0000,
+            BitmapChar::Number7 => 0x7E04081020400000,
+            BitmapChar::Number8 => 0x3C423C42423C0000,
+            BitmapChar::Number9 => 0x3C42423E023C0000,
+
+            BitmapChar::UpperA => 0x1818243C42420000,
+            BitmapChar::UpperB => 0x7844784444780000,
+            BitmapChar::UpperC => 0x3844808044380000,
+            BitmapChar::UpperD => 0x7844444444780000,
+            BitmapChar::UpperE => 0x7C407840407C0000,
+            BitmapChar::UpperF => 0x7C40784040400000,
+            BitmapChar::UpperG => 0x3844809C44380000,
+            BitmapChar::UpperH => 0x42427E4242420000,
+            BitmapChar::UpperI => 0x3E080808083E0000,
+            BitmapChar::UpperJ => 0x1C04040444380000,
+            BitmapChar::UpperK => 0x4448507048440000,
+            BitmapChar::UpperL => 0x40404040407E0000,
+            BitmapChar::UpperM => 0x4163554941410000,
+            BitmapChar::UpperN => 0x4262524A46420000,
+            BitmapChar::UpperO => 0x1C222222221C0000,
+            BitmapChar::UpperP => 0x7844784040400000,
+            BitmapChar::UpperQ => 0x1C222222221C0200,
+            BitmapChar::UpperR => 0x7844785048440000,
+            BitmapChar::UpperS => 0x1C22100C221C0000,
+            BitmapChar::UpperT => 0x7F08080808080000,
+            BitmapChar::UpperU => 0x42424242423C0000,
+            BitmapChar::UpperV => 0x8142422424180000,
+            BitmapChar::UpperW => 0x4141495563410000,
+            BitmapChar::UpperX => 0x4224181824420000,
+            BitmapChar::UpperY => 0x4122140808080000,
+            BitmapChar::UpperZ => 0x7E040810207E0000,
+
+            BitmapChar::LowerA => 0x3C023E463A0000,
+            BitmapChar::LowerB => 0x40407C42625C0000,
+            BitmapChar::LowerC => 0x1C20201C0000,
+            BitmapChar::LowerD => 0x2023E42463A0000,
+            BitmapChar::LowerE => 0x3C427E403C0000,
+            BitmapChar::LowerF => 0x18103810100000,
+            BitmapChar::LowerG => 0x344C44340438,
+            BitmapChar::LowerH => 0x2020382424240000,
+            BitmapChar::LowerI => 0x800080808080000,
+            BitmapChar::LowerJ => 0x800180808080870,
+            BitmapChar::LowerK => 0x20202428302C0000,
+            BitmapChar::LowerL => 0x1010101010180000,
+            BitmapChar::LowerM => 0x665A42420000,
+            BitmapChar::LowerN => 0x2E3222220000,
+            BitmapChar::LowerO => 0x3C42423C0000,
+            BitmapChar::LowerP => 0x5C62427C4040,
+            BitmapChar::LowerQ => 0x3A46423E0202,
+            BitmapChar::LowerR => 0x2C3220200000,
+            BitmapChar::LowerS => 0x1C201804380000,
+            BitmapChar::LowerT => 0x103C1010180000,
+            BitmapChar::LowerU => 0x2222261A0000,
+            BitmapChar::LowerV => 0x424224180000,
+            BitmapChar::LowerW => 0x81815A660000,
+            BitmapChar::LowerX => 0x422418660000,
+            BitmapChar::LowerY => 0x422214081060,
+            BitmapChar::LowerZ => 0x3C08103C0000,
+        }
+    }
 
     pub fn from_char(input: char) -> BitmapChar {
         match input {
@@ -173,6 +251,10 @@ impl BitmapChar {
             '!' => BitmapChar::ExclamationMark,
             '_' => BitmapChar::Underscore,
             ':' => BitmapChar::Colon,
+            '(' => BitmapChar::OpenParenthesis,
+            ')' => BitmapChar::CloseParenthesis,
+            '.' => BitmapChar::Point,
+            ',' => BitmapChar::Comma,
 
             '0' => BitmapChar::Number0,
             '1' => BitmapChar::Number1,
@@ -250,14 +332,14 @@ impl BitmapChar {
         )
     }
 
-    pub fn render_single_with_scale(
+    pub fn render_single_bitmap_with_scale(
         plane: &mut Plane,
         pos: (u32, u32),
-        character: char,
+        character: BitmapChar,
         color: Pixel,
         scale: u32,
     ) -> Result<(u32, u32)> {
-        let bitmap = BitmapChar::from_char(character) as u64;
+        let bitmap = character.as_u64();
 
         for delta_x in 0..(BitmapChar::CHAR_SIZE.0 * scale) {
             for delta_y in 0..(BitmapChar::CHAR_SIZE.1 * scale) {
@@ -282,6 +364,18 @@ impl BitmapChar {
             BitmapChar::CHAR_SIZE.0 * scale,
             BitmapChar::CHAR_SIZE.1 * scale,
         ))
+    }
+
+    pub fn render_single_with_scale(
+        plane: &mut Plane,
+        pos: (u32, u32),
+        character: char,
+        color: Pixel,
+        scale: u32,
+    ) -> Result<(u32, u32)> {
+        let bitmap = BitmapChar::from_char(character);
+
+        BitmapChar::render_single_bitmap_with_scale(plane, pos, bitmap, color, scale)
     }
 
     pub fn render_single(
