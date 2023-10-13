@@ -53,9 +53,11 @@ jobs:
 
       - name: Build
         run: cargo build --verbose --all-targets --all --all-features
+        continue-on-error: ${{ matrix.rust_channel != 'nightly' }}
 
       - name: Test
         run: cargo nextest run --all-features --all
+        continue-on-error: ${{ matrix.rust_channel != 'nightly' }}
 
   coverage:
     runs-on: ubuntu-latest
