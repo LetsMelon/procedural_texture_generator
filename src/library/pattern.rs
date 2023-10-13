@@ -3,10 +3,20 @@ use rusvid_core::pixel::Pixel;
 
 use crate::coordinate::Coordinate;
 use crate::input_output_value::InputOutputValue;
-use crate::node::Node;
+use crate::node::{Node, SpaceInfo};
 
 #[derive(Debug)]
-pub struct Pattern;
+pub struct Pattern {
+    space_info: SpaceInfo,
+}
+
+impl Pattern {
+    pub fn new() -> Self {
+        Pattern {
+            space_info: SpaceInfo::default(),
+        }
+    }
+}
 
 impl Node for Pattern {
     fn generate(
@@ -31,5 +41,13 @@ impl Node for Pattern {
                 255,
             ))),
         }
+    }
+
+    fn space_info(&self) -> &SpaceInfo {
+        &self.space_info
+    }
+
+    fn space_info_mut(&mut self) -> &mut SpaceInfo {
+        &mut self.space_info
     }
 }

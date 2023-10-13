@@ -2,74 +2,20 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use anyhow::Result;
-use petgraph::data::Build;
 use petgraph::stable_graph::{EdgeIndex, NodeIndex};
 use petgraph::visit::Dfs;
 use petgraph::{Directed, Graph};
 use rusvid_core::plane::Plane;
-use rusvid_core::prelude::Pixel;
 
-use crate::bitmap::BitmapChar;
 use crate::coordinate::Coordinate;
 use crate::input_output_value::InputOutputValue;
+use crate::library::output::Output;
 use crate::link::Link;
 use crate::node::Node;
-use crate::render_square;
-
-#[derive(Debug)]
-pub struct SpaceNode {
-    inner: Box<dyn Node>,
-
-    pub position: (u32, u32),
-    pub size: (u32, u32),
-    pub color: Pixel,
-    pub name: String,
-    pub z_index: usize,
-}
-
-impl SpaceNode {
-    pub fn new<N: Node + 'static>(node: N) -> Self {
-        SpaceNode {
-            inner: Box::new(node),
-            position: (100, 100),
-            size: (100, 100),
-            color: Pixel::new(255, 100, 0, 255),
-            // TODO name
-            name: "node".to_string(),
-            z_index: 0,
-        }
-    }
-
-    pub fn render(&self, plane: &mut Plane) -> Result<()> {
-        render_square(plane, self.position, self.size, self.color)?;
-        BitmapChar::render_multiple_with_scale(
-            plane,
-            (self.position.0, self.position.1 + 5),
-            &self.name,
-            Pixel::new(0, 0, 0, 255),
-            2,
-        )?;
-
-        Ok(())
-    }
-
-    pub fn add_delta(&mut self, delta: (i32, i32)) {}
-}
-
-impl Node for SpaceNode {
-    fn generate(
-        &self,
-        position: &Coordinate,
-        size: &(u32, u32),
-        input: InputOutputValue,
-    ) -> Result<InputOutputValue> {
-        self.inner.generate(position, size, input)
-    }
-}
 
 #[derive(Debug)]
 pub struct Generator {
-    pub(crate) internal_graph: Graph<Rc<RefCell<SpaceNode>>, (), Directed>,
+    pub(crate) internal_graph: Graph<Rc<RefCell<dyn Node>>, (), Directed>,
 
     output_node: NodeIndex,
 }
@@ -85,15 +31,7 @@ impl Generator {
             output_node: NodeIndex::new(0),
         };
 
-        g.output_node = g.add_node_with_space({
-            let mut sn = SpaceNode::new(crate::library::output::Output);
-
-            sn.name = "Output".to_string();
-            sn.color = Pixel::new(166, 166, 166, 255);
-            sn.size = (100, 30);
-
-            sn
-        });
+        g.output_node = g.add_node(Output::new());
 
         g
     }
@@ -103,12 +41,6 @@ impl Generator {
     }
 
     pub fn add_node<N: Node + 'static>(&mut self, node: N) -> NodeIndex {
-        let node = SpaceNode::new(node);
-
-        self.add_node_with_space(node)
-    }
-
-    pub fn add_node_with_space(&mut self, node: SpaceNode) -> NodeIndex {
         self.internal_graph.add_node(Rc::new(RefCell::new(node)))
     }
 
@@ -117,7 +49,7 @@ impl Generator {
             .add_edge(link.input_node, link.output_node, ())
     }
 
-    pub fn connected_nodes_to_output(&self) -> Vec<Rc<RefCell<SpaceNode>>> {
+    pub fn connected_nodes_to_output(&self) -> Vec<Rc<RefCell<dyn Node>>> {
         let mut g = self.internal_graph.clone();
         g.reverse();
 
@@ -146,8 +78,7 @@ impl Generator {
                 for node in &used_nodes_for_output {
                     let node = node.borrow();
 
-                    // TODO change that to something else so that we don't allocate a new string all the time when checking if the node is an `Output`
-                    if format!("{:?}", node).contains("Output") {
+                    if node.is_output() {
                         break;
                     }
                     value = node.generate(&pos, &size, value)?;

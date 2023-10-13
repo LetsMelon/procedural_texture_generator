@@ -2,16 +2,22 @@ use anyhow::Result;
 
 use crate::coordinate::Coordinate;
 use crate::input_output_value::InputOutputValue;
-use crate::node::Node;
+use crate::node::{Node, SpaceInfo};
 
 #[derive(Debug)]
 pub struct StaticValue {
     value: InputOutputValue,
+
+    space_info: SpaceInfo,
 }
 
 impl StaticValue {
     pub fn new(value: InputOutputValue) -> Self {
-        StaticValue { value }
+        StaticValue {
+            value,
+
+            space_info: SpaceInfo::default(),
+        }
     }
 }
 
@@ -23,6 +29,14 @@ impl Node for StaticValue {
         _input: InputOutputValue,
     ) -> Result<InputOutputValue> {
         Ok(self.value)
+    }
+
+    fn space_info(&self) -> &SpaceInfo {
+        &self.space_info
+    }
+
+    fn space_info_mut(&mut self) -> &mut SpaceInfo {
+        &mut self.space_info
     }
 }
 

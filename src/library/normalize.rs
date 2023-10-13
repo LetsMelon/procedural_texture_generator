@@ -3,17 +3,21 @@ use rusvid_core::prelude::Pixel;
 
 use crate::coordinate::Coordinate;
 use crate::input_output_value::InputOutputValue;
-use crate::node::Node;
+use crate::node::{Node, SpaceInfo};
 
 #[derive(Debug)]
 pub struct Normalize {
     value: f64,
+
+    space_info: SpaceInfo,
 }
 
 impl Normalize {
     pub fn new(value: f64) -> Self {
         Normalize {
             value: value.min(1.0).max(0.0001),
+
+            space_info: SpaceInfo::default(),
         }
     }
 }
@@ -37,5 +41,13 @@ impl Node for Normalize {
 
         let arr = [values[0], values[1], values[2], values[3]];
         Ok(InputOutputValue::Pixel(Pixel::new_raw(arr)))
+    }
+
+    fn space_info(&self) -> &SpaceInfo {
+        &self.space_info
+    }
+
+    fn space_info_mut(&mut self) -> &mut SpaceInfo {
+        &mut self.space_info
     }
 }
