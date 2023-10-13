@@ -1,8 +1,16 @@
+use std::fmt::Display;
+
 #[derive(Debug)]
 pub struct Coordinate {
     x: f64,
     y: f64,
     z: f64,
+}
+
+impl Display for Coordinate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({:.3}, {:.3}, {:.3})", self.x, self.y, self.z)
+    }
 }
 
 impl Coordinate {
