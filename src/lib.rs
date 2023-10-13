@@ -6,7 +6,8 @@ pub mod library;
 pub mod link;
 pub mod node;
 
-use generator::SpaceNode;
+use std::sync::{Mutex, MutexGuard};
+
 use itertools::Itertools;
 use once_cell::sync::OnceCell;
 use petgraph::stable_graph::NodeIndex;
@@ -22,9 +23,10 @@ use crate::library::map::Map;
 use crate::library::noise::Noise;
 use crate::library::static_value::StaticValue;
 use crate::link::Link;
+use crate::node::Node;
 
-static mut GENERATOR: OnceCell<Generator> = OnceCell::new();
-static mut SELECTED_NODE: Option<NodeIndex> = None;
+static GENERATOR: OnceCell<Mutex<Generator>> = OnceCell::new();
+static SELECTED_NODE: Mutex<Option<NodeIndex>> = Mutex::new(None);
 
 #[cfg(target_arch = "wasm32")]
 #[macro_export]
@@ -58,61 +60,69 @@ macro_rules! dbg {
     };
 }
 
-fn get_generator() -> &'static Generator {
-    unsafe {
-        GENERATOR.get_or_init(|| {
-            let mut generator = Generator::new();
-            let node_noise = generator.add_node_with_space({
-                let mut sn = SpaceNode::new({
-                    let mut n = Noise::new(1);
-
-                    n.set_scale(Coordinate::new(4.0, 4.0, 1.0));
-                    n.set_offset(Coordinate::new(0.0, 0.0, 0.0));
-
-                    n
-                });
-
-                sn.name = "Noise".to_string();
-
-                sn
-            });
-            let node_map = generator.add_node_with_space({
-                let mut sn = SpaceNode::new(Map::new(vec![
-                    (InputOutputValue::Float(1.0), 0.30),
-                    (InputOutputValue::Float(0.0), 0.3001),
-                ]));
-
-                sn.name = "Map".to_string();
-
-                sn
-            });
-            let _node_static = generator.add_node(StaticValue::new(InputOutputValue::Pixel(
-                Pixel::new(255, 100, 0, 255),
-            )));
-            let node_output = generator.output_node();
-
-            println!("Created nodes");
-
-            // generator.add_edge(Link::new(node_noise, node_output));
-            generator.add_edge(Link::new(node_noise, node_map));
-            generator.add_edge(Link::new(node_map, node_output));
-            // generator.add_edge(Link::new(node_static, node_output));
-
-            println!("Added links");
-
-            generator
-        })
-    }
+trait RenderNode {
+    fn render(&self, plane: &mut Plane) -> anyhow::Result<()>;
 }
 
-fn get_selected_node() -> Option<NodeIndex> {
-    unsafe { SELECTED_NODE }
+fn generator_mutex() -> &'static Mutex<generator::Generator> {
+    GENERATOR.get_or_init(|| {
+        let mut generator = Generator::new();
+        let node_noise = generator.add_node({
+            let mut n = Noise::new(1);
+
+            n.set_scale(Coordinate::new(8.0, 8.0, 1.0));
+            n.set_offset(Coordinate::new(0.0, 0.0, 0.0));
+
+            n.space_info_mut().name = "Noise".to_string();
+
+            n
+        });
+        let node_map = generator.add_node({
+            // let mut n = Map::new(vec![
+            //     (InputOutputValue::Float(1.0), 0.30),
+            //     (InputOutputValue::Float(0.0), 0.3001),
+            // ]);
+            let mut n = Map::new(vec![
+                (InputOutputValue::Pixel(Pixel::new(0, 0, 100, 255)), 0.20),
+                (InputOutputValue::Pixel(Pixel::new(100, 0, 0, 255)), 0.30),
+                (InputOutputValue::Pixel(Pixel::new(0, 100, 100, 255)), 0.50),
+                (InputOutputValue::Pixel(Pixel::new(255, 255, 0, 255)), 1.0),
+            ]);
+
+            n.space_info_mut().name = "Map".to_string();
+
+            n
+        });
+        let _node_static = generator.add_node(StaticValue::new(InputOutputValue::Pixel(
+            Pixel::new(255, 100, 0, 255),
+        )));
+        let node_output = generator.output_node();
+
+        println!("Created nodes");
+
+        // generator.add_edge(Link::new(node_noise, node_output));
+        generator.add_edge(Link::new(node_noise, node_map));
+        generator.add_edge(Link::new(node_map, node_output));
+        // generator.add_edge(Link::new(node_static, node_output));
+
+        println!("Added links");
+
+        Mutex::new(generator)
+    })
+}
+
+fn get_generator() -> MutexGuard<'static, generator::Generator> {
+    generator_mutex().lock().unwrap()
+}
+
+fn get_selected_node() -> MutexGuard<'static, Option<NodeIndex>> {
+    SELECTED_NODE.lock().unwrap()
 }
 
 fn set_selected_node(value: Option<NodeIndex>) {
-    unsafe {
-        SELECTED_NODE = value;
-    }
+    let mut selected_node = SELECTED_NODE.lock().unwrap();
+
+    *selected_node = value;
 }
 
 pub(crate) fn render_square(
@@ -163,15 +173,15 @@ fn draw_circle(
 
 fn draw_line(
     plane: &mut Plane,
-    pos1: (u32, u32),
-    pos2: (u32, u32),
+    pos1: (i64, i64),
+    pos2: (i64, i64),
     color: Pixel,
     stroke_weight: u32,
 ) -> anyhow::Result<()> {
-    let mut x1 = pos1.0 as i32;
-    let mut y1 = pos1.1 as i32;
-    let x2 = pos2.0 as i32;
-    let y2 = pos2.1 as i32;
+    let mut x1 = pos1.0 as i64;
+    let mut y1 = pos1.1 as i64;
+    let x2 = pos2.0 as i64;
+    let y2 = pos2.1 as i64;
 
     let dx = (x2 - x1).abs();
     let dy = (y2 - y1).abs();
@@ -180,7 +190,7 @@ fn draw_line(
     let mut err = dx - dy;
 
     while x1 != x2 || y1 != y2 {
-        if x1 > 0 && x1 <= plane.width() as i32 && y1 > 0 && y1 <= plane.height() as i32 {
+        if x1 > 0 && x1 <= plane.width() as i64 && y1 > 0 && y1 <= plane.height() as i64 {
             // plane.put_pixel(x1 as u32, y1 as u32, color)?;
             draw_circle(plane, (x1 as u32, y1 as u32), color, stroke_weight)?;
         }
@@ -204,14 +214,14 @@ fn draw_line(
 pub fn move_node_to(node: usize, position_x: u32, position_y: u32) -> Result<(), JsValue> {
     println!("Move node {:?} to {:?}", &node, (position_x, position_y));
 
-    let generator = unsafe { GENERATOR.get_mut().unwrap() };
+    let mut generator = get_generator();
 
     if let Some(node) = generator
         .internal_graph
         .node_weight_mut(NodeIndex::new(node))
     {
-        let n = unsafe { node.as_ptr().as_mut() }.unwrap();
-        n.position = (position_x, position_y);
+        let mut n = node.borrow_mut();
+        n.space_info_mut().position = (position_x, position_y);
     }
 
     Ok(())
@@ -223,8 +233,9 @@ pub fn move_node(node: usize, delta_x: i32, delta_y: i32) -> Result<(), JsValue>
 
     let generator = get_generator();
     if let Some(n) = generator.internal_graph.node_weight(NodeIndex::new(node)) {
-        let n = unsafe { n.as_ptr().as_mut() }.unwrap();
-        let position = n.position;
+        let position = n.borrow().space_info().position;
+
+        drop(generator);
 
         move_node_to(
             node,
@@ -239,63 +250,66 @@ pub fn move_node(node: usize, delta_x: i32, delta_y: i32) -> Result<(), JsValue>
 #[wasm_bindgen]
 pub fn nodes(ctx: &CanvasRenderingContext2d, width: u32, height: u32) -> Result<(), JsValue> {
     println!("Nodes call:");
+    println!("No panic here: 1:");
 
     let generator = get_generator();
     let mut plane = Plane::new(width, height).unwrap();
+    println!("No panic here: 2:");
 
     println!("Draw edges:");
 
     for edge in generator.internal_graph.raw_edges() {
+        println!("No panic here: 3:");
+        println!("edge: {edge:?}");
         let source_index = edge.source();
         let target_index = edge.target();
 
-        let source = unsafe {
-            generator
-                .internal_graph
-                .node_weight(source_index)
-                .unwrap()
-                .as_ptr()
-                .as_ref()
-                .unwrap()
-        };
-        let target = unsafe {
-            generator
-                .internal_graph
-                .node_weight(target_index)
-                .unwrap()
-                .as_ptr()
-                .as_ref()
-                .unwrap()
-        };
+        let source = generator
+            .internal_graph
+            .node_weight(source_index)
+            .map(|item| item.borrow());
+        let target = generator
+            .internal_graph
+            .node_weight(target_index)
+            .map(|item| item.borrow());
 
-        if source.position == target.position {
-            continue;
+        if let (Some(source), Some(target)) = (source, target) {
+            if source.space_info().position == target.space_info().position {
+                continue;
+            }
+
+            println!("{:?}\n->\n{:?}", source, target);
+
+            println!(
+                "source: {:?}\ntarget: {:?}",
+                source.space_info().position,
+                target.space_info().position
+            );
+
+            let source_center = (
+                ((source.space_info().position.0 as i64) + (source.space_info().size.0 as i64) / 2),
+                ((source.space_info().position.1 as i64) + (source.space_info().size.1 as i64) / 2),
+            );
+            let target_center = (
+                ((target.space_info().position.0 as i64) + (target.space_info().size.0 as i64) / 2),
+                ((target.space_info().position.1 as i64) + (target.space_info().size.1 as i64) / 2),
+            );
+
+            println!("source_center: {:?}", source_center);
+            println!("target_center: {:?}", target_center);
+
+            draw_line(
+                &mut plane,
+                source_center,
+                target_center,
+                Pixel::new(15, 75, 165, 255),
+                5,
+            )
+            .unwrap();
         }
-
-        println!("{:?} -> {:?}", source, target);
-
-        let source_center = (
-            source.position.0 + source.size.0 / 2,
-            source.position.1 + source.size.1 / 2,
-        );
-        let target_center = (
-            target.position.0 + target.size.0 / 2,
-            target.position.1 + target.size.1 / 2,
-        );
-
-        println!("source_center: {:?}", source_center);
-        println!("target_center: {:?}", target_center);
-
-        draw_line(
-            &mut plane,
-            source_center,
-            target_center,
-            Pixel::new(15, 75, 165, 255),
-            5,
-        )
-        .unwrap();
     }
 
+    println!("No panic here: 4:");
     for node in generator.connected_nodes_to_output() {
         let node = node.borrow();
 
@@ -303,12 +317,14 @@ pub fn nodes(ctx: &CanvasRenderingContext2d, width: u32, height: u32) -> Result<
         node.render(&mut plane).unwrap();
     }
 
+    println!("No panic here: 5:");
     let data = ImageData::new_with_u8_clamped_array_and_sh(
         Clamped(plane.as_data_flatten().as_slice()),
         width,
         height,
     )?;
     ctx.put_image_data(&data, 0.0, 0.0)?;
+    println!("No panic here: 6:");
 
     Ok(())
 }
@@ -346,18 +362,15 @@ pub fn canvas_click(
     let maybe_node = generator
         .internal_graph
         .node_indices()
-        .map(|id| {
-            (id, unsafe {
-                generator
-                    .internal_graph
-                    .node_weight(id)
-                    .unwrap()
-                    .as_ptr()
-                    .as_ref()
-                    .unwrap()
-            })
+        .filter_map(|id| {
+            let node = generator.internal_graph.node_weight(id);
+
+            match node {
+                Some(node) => Some((id, node.borrow())),
+                None => None,
+            }
         })
-        .sorted_by(|(_, a), (_, b)| a.z_index.cmp(&b.z_index))
+        .sorted_by(|(_, a), (_, b)| a.space_info().z_index.cmp(&b.space_info().z_index))
         .fold(None, |acc, (id, item)| {
             if acc.is_some() {
                 return acc;
@@ -365,14 +378,16 @@ pub fn canvas_click(
 
             println!(
                 "Check with node {:?} at position: {:?} with size {:?}",
-                &id, item.position, item.size
+                &id,
+                item.space_info().position,
+                item.space_info().size
             );
 
             // TODO not right!
-            if click_x >= item.position.0
-                && click_x <= (item.position.0 + item.size.0)
-                && click_y >= item.position.1
-                && click_y <= (item.position.1 + item.size.1)
+            if click_x >= item.space_info().position.0
+                && click_x <= (item.space_info().position.0 + item.space_info().size.0)
+                && click_y >= item.space_info().position.1
+                && click_y <= (item.space_info().position.1 + item.space_info().size.1)
             {
                 return Some((id, item));
             }
@@ -399,5 +414,5 @@ pub fn canvas_click_active() -> Option<usize> {
 pub fn init() {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-    let _ = get_generator();
+    drop(get_generator())
 }
