@@ -3,6 +3,8 @@ import("./pkg")
     let canvas = document.getElementById("drawing");
     const ctx_render = canvas.getContext("2d");
     canvas = document.getElementById("nodes");
+    const nodes_width = canvas.width;
+    const nodes_height = canvas.height;
     const ctx_nodes = canvas.getContext("2d");
 
     wasm.init();
@@ -40,7 +42,7 @@ import("./pkg")
           mouseX - initialMouseX,
           mouseY - initialMouseY
         );
-        wasm.nodes(ctx_nodes, 500, 500);
+        wasm.nodes(ctx_nodes, nodes_width, nodes_height);
 
         initialMouseX = mouseX;
         initialMouseY = mouseY;
@@ -58,7 +60,7 @@ import("./pkg")
           mouseX - initialMouseX,
           mouseY - initialMouseY
         );
-        wasm.nodes(ctx_nodes, 500, 500);
+        wasm.nodes(ctx_nodes, nodes_width, nodes_height);
       }
 
       dragging = false;
@@ -68,11 +70,11 @@ import("./pkg")
     const renderBtn = document.getElementById("render");
     renderBtn.addEventListener("click", () => {
       drawCall(wasm, ctx_render);
-      wasm.nodes(ctx_nodes, 500, 500);
+      wasm.nodes(ctx_nodes, nodes_width, nodes_height);
     });
 
     drawCall(wasm, ctx_render);
-    wasm.nodes(ctx_nodes, 500, 500);
+    wasm.nodes(ctx_nodes, nodes_width, nodes_height);
   })
   .catch(console.error);
 
