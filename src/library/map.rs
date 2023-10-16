@@ -34,12 +34,12 @@ impl Node for Map {
         &self,
         _position: &Coordinate,
         _size: &(u32, u32),
-        input: InputOutputValue,
+        input: &[InputOutputValue],
     ) -> Result<InputOutputValue> {
         // TODO copy method for the windows of the `self.steps`` from `render`
-        let r = input.r_percentage()?;
-        let g = input.g_percentage()?;
-        let b = input.b_percentage()?;
+        let r = input[0].r_percentage()?;
+        let g = input[0].g_percentage()?;
+        let b = input[0].b_percentage()?;
         let avg = (r + g + b) / 3.0;
 
         // TODO the following functions should always return at least something because of `len(self.steps) >= 2`

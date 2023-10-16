@@ -81,7 +81,7 @@ impl Generator {
                     if node.is_output() {
                         break;
                     }
-                    value = node.generate(&pos, &size, value)?;
+                    value = node.generate(&pos, &size, &[value])?;
                 }
 
                 plane.put_pixel_unchecked(x as u32, y as u32, value.to_common_ground()?);

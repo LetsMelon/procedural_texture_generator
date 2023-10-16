@@ -23,9 +23,9 @@ impl Node for Pattern {
         &self,
         position: &Coordinate,
         _size: &(u32, u32),
-        input: InputOutputValue,
+        input: &[InputOutputValue],
     ) -> Result<InputOutputValue> {
-        let p = input.to_common_ground()?;
+        let p = input[0].to_common_ground()?;
 
         match (position.x() as usize % 2, position.y() as usize % 2) {
             (0, 0) | (1, 1) => Ok(InputOutputValue::Pixel(Pixel::new(

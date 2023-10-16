@@ -28,9 +28,9 @@ impl Node for Normalize {
         &self,
         _position: &Coordinate,
         _size: &(u32, u32),
-        input: InputOutputValue,
+        input: &[InputOutputValue],
     ) -> Result<InputOutputValue> {
-        let raw = input.to_common_ground()?.to_raw();
+        let raw = input[0].to_common_ground()?.to_raw();
 
         let values = raw
             .iter()

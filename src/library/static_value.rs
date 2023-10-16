@@ -26,7 +26,7 @@ impl Node for StaticValue {
         &self,
         _position: &Coordinate,
         _size: &(u32, u32),
-        _input: InputOutputValue,
+        _input: &[InputOutputValue],
     ) -> Result<InputOutputValue> {
         Ok(self.value)
     }
@@ -60,8 +60,12 @@ mod tests {
         for value_to_test in values_to_test {
             let node = StaticValue::new(value_to_test);
             assert_eq!(
-                node.generate(&Coordinate::new_x(0.0), &(0, 0), InputOutputValue::Nothing)
-                    .unwrap(),
+                node.generate(
+                    &Coordinate::new_x(0.0),
+                    &(0, 0),
+                    &[InputOutputValue::Nothing]
+                )
+                .unwrap(),
                 value_to_test
             );
         }

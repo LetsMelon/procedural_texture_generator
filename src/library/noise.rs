@@ -52,7 +52,7 @@ impl Node for Noise {
         &self,
         position: &Coordinate,
         size: &(u32, u32),
-        _input: InputOutputValue,
+        _input: &[InputOutputValue],
     ) -> Result<InputOutputValue> {
         let value = self.perlin.get([
             (((position.x()) / ((size.0 - 1) as f64)) + self.offset.x()) * self.scale.x(),

@@ -37,7 +37,7 @@ pub trait Node: std::fmt::Debug {
         &self,
         position: &Coordinate,
         size: &(u32, u32),
-        input: InputOutputValue,
+        input: &[InputOutputValue],
     ) -> Result<InputOutputValue>;
 
     fn is_output(&self) -> bool {

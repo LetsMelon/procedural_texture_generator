@@ -44,7 +44,7 @@ impl Node for Output {
         &self,
         _position: &Coordinate,
         _size: &(u32, u32),
-        _input: InputOutputValue,
+        _input: &[InputOutputValue],
     ) -> Result<InputOutputValue> {
         todo!()
     }
