@@ -334,7 +334,7 @@ impl BitmapChar {
 
     pub fn render_single_bitmap_with_scale(
         plane: &mut Plane,
-        pos: (u32, u32),
+        pos: (i64, i64),
         character: BitmapChar,
         color: Pixel,
         scale: u32,
@@ -343,8 +343,8 @@ impl BitmapChar {
 
         for delta_x in 0..(BitmapChar::CHAR_SIZE.0 * scale) {
             for delta_y in 0..(BitmapChar::CHAR_SIZE.1 * scale) {
-                let pixel_x = pos.0 + delta_x;
-                let pixel_y = pos.1 + delta_y;
+                let pixel_x = pos.0 + (delta_x as i64);
+                let pixel_y = pos.1 + (delta_y as i64);
 
                 let char_x = delta_x / scale;
                 let char_y = delta_y / scale;
@@ -354,8 +354,13 @@ impl BitmapChar {
 
                 let bit = ((bitmap >> bit_index) & 0x01) != 0;
                 // TODO implement `Plane::inside -> bool`
-                if bit && pixel_x < plane.width() && pixel_y < plane.height() {
-                    plane.put_pixel(pixel_x, pixel_y, color)?;
+                if bit
+                    && pixel_x >= 0
+                    && pixel_x < plane.width() as i64
+                    && pixel_y >= 0
+                    && pixel_y < plane.height() as i64
+                {
+                    plane.put_pixel(pixel_x as u32, pixel_y as u32, color)?;
                 }
             }
         }
@@ -368,7 +373,7 @@ impl BitmapChar {
 
     pub fn render_single_with_scale(
         plane: &mut Plane,
-        pos: (u32, u32),
+        pos: (i64, i64),
         character: char,
         color: Pixel,
         scale: u32,
@@ -380,7 +385,7 @@ impl BitmapChar {
 
     pub fn render_single(
         plane: &mut Plane,
-        pos: (u32, u32),
+        pos: (i64, i64),
         character: char,
         color: Pixel,
     ) -> Result<(u32, u32)> {
@@ -389,7 +394,7 @@ impl BitmapChar {
 
     pub fn render_multiple_with_scale<S: AsRef<str>>(
         plane: &mut Plane,
-        pos: (u32, u32),
+        pos: (i64, i64),
         text: S,
         color: Pixel,
         scale: u32,
@@ -402,7 +407,7 @@ impl BitmapChar {
         for item in text.chars() {
             let delta = BitmapChar::render_single_with_scale(
                 plane,
-                (pos.0 + delta_drawn_x, pos.1),
+                (pos.0 + delta_drawn_x as i64, pos.1),
                 item,
                 color,
                 scale,

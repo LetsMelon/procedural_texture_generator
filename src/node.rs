@@ -11,7 +11,7 @@ use crate::render_square;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpaceInfo {
-    pub position: (u32, u32),
+    pub position: (i64, i64),
     pub size: (u32, u32),
     pub color: Pixel,
     pub name: String,

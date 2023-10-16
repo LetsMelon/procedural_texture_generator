@@ -116,7 +116,7 @@ impl Node for Map {
         let box_height = delta_y;
         let box_pos = (
             space_info.position.0,
-            space_info.position.1 + delta_y * 3 / 2,
+            space_info.position.1 + (delta_y as i64) * 3 / 2,
         );
         if box_width > 0 {
             let steps = self
@@ -156,7 +156,7 @@ impl Node for Map {
 
                 let box_width = box_width as u32;
                 for delta_x in x_start..box_width {
-                    let x = box_pos.0 + margin as u32 + delta_x;
+                    let x = box_pos.0 + margin as i64 + delta_x as i64;
 
                     let p = delta_x as f64 / (box_width - 1) as f64;
 
@@ -184,12 +184,12 @@ impl Node for Map {
                         }
                     };
 
-                    if x >= 0 && x < plane.width() {
+                    if x >= 0 && x < plane.width() as i64 {
                         for delta_y in 0..box_height {
-                            let y = box_pos.1 + delta_y;
+                            let y = box_pos.1 + delta_y as i64;
 
-                            if y >= 0 && y < plane.width() {
-                                let err = plane.put_pixel(x, y, color)?;
+                            if y >= 0 && y < plane.width() as i64 {
+                                let err = plane.put_pixel(x as u32, y as u32, color)?;
                                 // if let Err(err) = err {
                                 //     let is_out_of_bound_error =
                                 //         matches!(err, PlaneError::OutOfBound2d(_, _));

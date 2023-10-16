@@ -1,11 +1,10 @@
 import("./pkg")
   .then((wasm) => {
-    let canvas = document.getElementById("drawing");
-    const ctx_render = canvas.getContext("2d");
-    canvas = document.getElementById("nodes");
+    const canvas = document.getElementById("nodes");
+    const ctx_nodes = canvas.getContext("2d");
+
     const nodes_width = canvas.width;
     const nodes_height = canvas.height;
-    const ctx_nodes = canvas.getContext("2d");
 
     wasm.init();
 
@@ -37,10 +36,17 @@ import("./pkg")
         const mouseX = event.clientX - canvas.getBoundingClientRect().left;
         const mouseY = event.clientY - canvas.getBoundingClientRect().top;
 
+        console.log({
+          mouseX,
+          mouseY,
+          deltaX: mouseX - initialMouseX,
+          deltaY: mouseY - initialMouseY,
+        });
+
         wasm.move_node(
           selectedNode,
-          mouseX - initialMouseX,
-          mouseY - initialMouseY
+          BigInt(mouseX - initialMouseX),
+          BigInt(mouseY - initialMouseY)
         );
         wasm.nodes(ctx_nodes, nodes_width, nodes_height);
 
@@ -57,8 +63,8 @@ import("./pkg")
 
         wasm.move_node(
           selectedNode,
-          mouseX - initialMouseX,
-          mouseY - initialMouseY
+          BigInt(mouseX - initialMouseX),
+          BigInt(mouseY - initialMouseY)
         );
         wasm.nodes(ctx_nodes, nodes_width, nodes_height);
       }
@@ -67,15 +73,6 @@ import("./pkg")
       selectedNode = undefined;
     });
 
-    const renderBtn = document.getElementById("render");
-    renderBtn.addEventListener("click", () => {
-      drawCall(wasm, ctx_render);
-      wasm.nodes(ctx_nodes, nodes_width, nodes_height);
-    });
-
-    drawCall(wasm, ctx_render);
     wasm.nodes(ctx_nodes, nodes_width, nodes_height);
   })
   .catch(console.error);
-
-const drawCall = (wasm, ctx) => wasm.render(ctx, 250, 250);

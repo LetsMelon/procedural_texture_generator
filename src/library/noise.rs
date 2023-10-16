@@ -85,7 +85,10 @@ impl Node for Noise {
 
         let (_, delta) = BitmapChar::render_multiple_with_scale(
             plane,
-            (space_info.position.0, space_info.position.1 + 5 + delta_y),
+            (
+                space_info.position.0,
+                space_info.position.1 + 5 + delta_y as i64,
+            ),
             format!("Seed: {}", self.seed),
             Pixel::new(0, 0, 0, 255),
             1,
@@ -94,7 +97,10 @@ impl Node for Noise {
 
         let (_, delta) = BitmapChar::render_multiple_with_scale(
             plane,
-            (space_info.position.0, space_info.position.1 + 5 + delta_y),
+            (
+                space_info.position.0,
+                space_info.position.1 + 5 + delta_y as i64,
+            ),
             format!("Offset: {}", self.offset),
             Pixel::new(0, 0, 0, 255),
             1,
@@ -103,7 +109,10 @@ impl Node for Noise {
 
         BitmapChar::render_multiple_with_scale(
             plane,
-            (space_info.position.0, space_info.position.1 + 5 + delta_y),
+            (
+                space_info.position.0,
+                space_info.position.1 + 5 + delta_y as i64,
+            ),
             format!("Scale: {}", self.scale),
             Pixel::new(0, 0, 0, 255),
             1,

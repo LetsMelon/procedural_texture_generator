@@ -9,6 +9,7 @@ pub mod node;
 use std::sync::{Mutex, MutexGuard};
 
 use itertools::Itertools;
+use library::output::Output;
 use once_cell::sync::OnceCell;
 use petgraph::stable_graph::NodeIndex;
 use rusvid_core::prelude::{Pixel, Plane};
@@ -26,6 +27,7 @@ use crate::link::Link;
 use crate::node::Node;
 
 static GENERATOR: OnceCell<Mutex<Generator>> = OnceCell::new();
+static CACHED_GENERATOR_OUTPUT: OnceCell<Plane> = OnceCell::new();
 static SELECTED_NODE: Mutex<Option<NodeIndex>> = Mutex::new(None);
 
 #[cfg(target_arch = "wasm32")]
@@ -64,7 +66,7 @@ trait RenderNode {
     fn render(&self, plane: &mut Plane) -> anyhow::Result<()>;
 }
 
-fn generator_mutex() -> &'static Mutex<generator::Generator> {
+fn generator_mutex() -> &'static Mutex<Generator> {
     GENERATOR.get_or_init(|| {
         let mut generator = Generator::new();
         let node_noise = generator.add_node({
@@ -78,10 +80,6 @@ fn generator_mutex() -> &'static Mutex<generator::Generator> {
             n
         });
         let node_map = generator.add_node({
-            // let mut n = Map::new(vec![
-            //     (InputOutputValue::Float(1.0), 0.30),
-            //     (InputOutputValue::Float(0.0), 0.3001),
-            // ]);
             let mut n = Map::new(vec![
                 (InputOutputValue::Pixel(Pixel::new(0, 0, 100, 255)), 0.20),
                 (InputOutputValue::Pixel(Pixel::new(100, 0, 0, 255)), 0.30),
@@ -127,13 +125,21 @@ fn set_selected_node(value: Option<NodeIndex>) {
 
 pub(crate) fn render_square(
     plane: &mut Plane,
-    pos: (u32, u32),
+    pos: (i64, i64),
     size: (u32, u32),
     color: Pixel,
 ) -> anyhow::Result<()> {
-    for x in pos.0..(pos.0 + size.0).min(plane.height()) {
-        for y in pos.1..(pos.1 + size.1).min(plane.width()) {
-            plane.put_pixel(x, y, color)?;
+    // normalize the 'coordinates'
+
+    let from_x = (pos.0).max(0);
+    let to_x = (pos.0 + size.0 as i64).min(plane.height() as i64);
+
+    let from_y = (pos.1).max(0);
+    let to_y = (pos.1 + size.1 as i64).min(plane.width() as i64);
+
+    for x in from_x..to_x {
+        for y in from_y..to_y {
+            plane.put_pixel(x as u32, y as u32, color)?;
         }
     }
 
@@ -154,8 +160,6 @@ fn draw_circle(
 
     for (x, y) in ((radius * -1)..radius)
         .cartesian_product((radius * -1)..radius)
-        .sorted_by_key(|(x, y)| x * 4157 + y * 6481)
-        .dedup()
         .filter(|(delta_x, delta_y)| {
             let xx = *delta_x as f32;
             let yy = *delta_y as f32;
@@ -211,7 +215,7 @@ fn draw_line(
 }
 
 #[wasm_bindgen]
-pub fn move_node_to(node: usize, position_x: u32, position_y: u32) -> Result<(), JsValue> {
+pub fn move_node_to(node: usize, position_x: i64, position_y: i64) -> Result<(), JsValue> {
     println!("Move node {:?} to {:?}", &node, (position_x, position_y));
 
     let mut generator = get_generator();
@@ -228,8 +232,8 @@ pub fn move_node_to(node: usize, position_x: u32, position_y: u32) -> Result<(),
 }
 
 #[wasm_bindgen]
-pub fn move_node(node: usize, delta_x: i32, delta_y: i32) -> Result<(), JsValue> {
-    println!("Move node: {:?}", &node);
+pub fn move_node(node: usize, delta_x: i64, delta_y: i64) -> Result<(), JsValue> {
+    println!("Move node: {:?}, {:?}", &node, (delta_x, delta_y));
 
     let generator = get_generator();
     if let Some(n) = generator.internal_graph.node_weight(NodeIndex::new(node)) {
@@ -239,8 +243,8 @@ pub fn move_node(node: usize, delta_x: i32, delta_y: i32) -> Result<(), JsValue>
 
         move_node_to(
             node,
-            (position.0 as i32 + delta_x) as u32,
-            (position.1 as i32 + delta_y) as u32,
+            position.0 as i64 + delta_x,
+            position.1 as i64 + delta_y,
         )?;
     }
 
@@ -250,16 +254,13 @@ pub fn move_node(node: usize, delta_x: i32, delta_y: i32) -> Result<(), JsValue>
 #[wasm_bindgen]
 pub fn nodes(ctx: &CanvasRenderingContext2d, width: u32, height: u32) -> Result<(), JsValue> {
     println!("Nodes call:");
-    println!("No panic here: 1:");
 
     let generator = get_generator();
     let mut plane = Plane::new(width, height).unwrap();
-    println!("No panic here: 2:");
 
     println!("Draw edges:");
 
     for edge in generator.internal_graph.raw_edges() {
-        println!("No panic here: 3:");
         println!("edge: {edge:?}");
         let source_index = edge.source();
         let target_index = edge.target();
@@ -280,23 +281,14 @@ pub fn nodes(ctx: &CanvasRenderingContext2d, width: u32, height: u32) -> Result<
 
             println!("{:?}\n->\n{:?}", source, target);
 
-            println!(
-                "source: {:?}\ntarget: {:?}",
-                source.space_info().position,
-                target.space_info().position
-            );
-
             let source_center = (
-                ((source.space_info().position.0 as i64) + (source.space_info().size.0 as i64) / 2),
-                ((source.space_info().position.1 as i64) + (source.space_info().size.1 as i64) / 2),
+                ((source.space_info().position.0) + (source.space_info().size.0 as i64) / 2),
+                ((source.space_info().position.1) + (source.space_info().size.1 as i64) / 2),
             );
             let target_center = (
-                ((target.space_info().position.0 as i64) + (target.space_info().size.0 as i64) / 2),
-                ((target.space_info().position.1 as i64) + (target.space_info().size.1 as i64) / 2),
+                ((target.space_info().position.0) + (target.space_info().size.0 as i64) / 2),
+                ((target.space_info().position.1) + (target.space_info().size.1 as i64) / 2),
             );
-
-            println!("source_center: {:?}", source_center);
-            println!("target_center: {:?}", target_center);
 
             draw_line(
                 &mut plane,
@@ -309,34 +301,24 @@ pub fn nodes(ctx: &CanvasRenderingContext2d, width: u32, height: u32) -> Result<
         }
     }
 
-    println!("No panic here: 4:");
     for node in generator.connected_nodes_to_output() {
-        let node = node.borrow();
+        let node_borrowed = node.borrow();
 
-        println!("Rendering node: {:?}", &node);
-        node.render(&mut plane).unwrap();
+        println!("Rendering node: {:?}", &node_borrowed,);
+        node_borrowed.render(&mut plane).unwrap();
+
+        if node_borrowed.is_output() {
+            // TODO There must be a better way to cast a 'dyn Node' to a '&Output'.
+            if let Some(output_ref) = unsafe { (node.as_ref().as_ptr() as *mut Output).as_ref() } {
+                output_ref
+                    .draw_generated_output_into_node(
+                        &mut plane,
+                        CACHED_GENERATOR_OUTPUT.get().unwrap(),
+                    )
+                    .unwrap()
+            }
+        }
     }
-
-    println!("No panic here: 5:");
-    let data = ImageData::new_with_u8_clamped_array_and_sh(
-        Clamped(plane.as_data_flatten().as_slice()),
-        width,
-        height,
-    )?;
-    ctx.put_image_data(&data, 0.0, 0.0)?;
-    println!("No panic here: 6:");
-
-    Ok(())
-}
-
-#[wasm_bindgen]
-pub fn render(ctx: &CanvasRenderingContext2d, width: u32, height: u32) -> Result<(), JsValue> {
-    println!("Render call:");
-
-    let generator = get_generator();
-    let plane = generator.generate(width, height).unwrap();
-
-    println!("Generated plane");
 
     let data = ImageData::new_with_u8_clamped_array_and_sh(
         Clamped(plane.as_data_flatten().as_slice()),
@@ -384,10 +366,13 @@ pub fn canvas_click(
             );
 
             // TODO not right!
+            let click_x = click_x as i64;
+            let click_y = click_y as i64;
+
             if click_x >= item.space_info().position.0
-                && click_x <= (item.space_info().position.0 + item.space_info().size.0)
+                && click_x <= (item.space_info().position.0 + (item.space_info().size.0 as i64))
                 && click_y >= item.space_info().position.1
-                && click_y <= (item.space_info().position.1 + item.space_info().size.1)
+                && click_y <= (item.space_info().position.1 + (item.space_info().size.1 as i64))
             {
                 return Some((id, item));
             }
@@ -414,5 +399,9 @@ pub fn canvas_click_active() -> Option<usize> {
 pub fn init() {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-    drop(get_generator())
+    let generator = get_generator();
+
+    CACHED_GENERATOR_OUTPUT
+        .set(generator.generate(200, 200).unwrap())
+        .unwrap();
 }
