@@ -15,6 +15,7 @@ pub struct Normalize {
 impl Normalize {
     pub fn new(value: f64) -> Self {
         Normalize {
+            // TODO use '.clamp' instead of '.min' and '.max'
             value: value.min(1.0).max(0.0001),
 
             space_info: SpaceInfo::default(),
@@ -34,6 +35,7 @@ impl Node for Normalize {
         let values = raw
             .iter()
             .map(|item| 255.0 / (*item as f64))
+            // TODO use '.clamp' instead of '.min' and '.max'
             .map(|item| ((item / self.value).min(1.0).max(0.0) * 255.0) as u8)
             .collect::<Vec<_>>();
 
