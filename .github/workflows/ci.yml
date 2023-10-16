@@ -21,7 +21,45 @@ env:
   CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
 
 jobs:
-  build:
+  build_test:
+    strategy:
+      matrix:
+        rust_channel: [stable, beta, nightly]
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust_channel }}
+          override: true
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ matrix.os }}-rust_${{ matrix.rust_channel }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --verbose --all-targets --all --all-features
+        continue-on-error: ${{ matrix.rust_channel != 'nightly' }}
+
+      - name: Test
+        run: cargo nextest run --all-features --all
+        continue-on-error: ${{ matrix.rust_channel != 'nightly' }}
+
+  coverage:
     runs-on: ubuntu-latest
 
     steps:
@@ -35,7 +73,7 @@ jobs:
 
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-llvm-cov,cargo-nextest
+          tool: cargo-llvm-cov
 
       - uses: actions/cache@v3
         with:
@@ -45,13 +83,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build
-        run: cargo build --verbose --all-targets --all --all-features
-
-      - name: Test
-        run: cargo nextest run --all-features --all
+          key: ubuntu-latest-rust_nightly-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo llvm-cov
         run: |
@@ -62,3 +94,28 @@ jobs:
       #   env:
       #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       #     fail_ci_if_error: true
+
+  wasm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          target: wasm32-unknown-unknown
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ubuntu-latest-wasm32-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: check
+        run: cargo check --target wasm32-unknown-unknown

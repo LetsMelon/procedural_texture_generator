@@ -3,3 +3,5 @@
 **.bmp
 **.DS_Store
 profile.json
+node_modules/
+pkg/

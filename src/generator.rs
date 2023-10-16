@@ -9,15 +9,19 @@ use rusvid_core::plane::Plane;
 
 use crate::coordinate::Coordinate;
 use crate::input_output_value::InputOutputValue;
+use crate::library::output::Output;
 use crate::link::Link;
 use crate::node::Node;
 
 #[derive(Debug)]
 pub struct Generator {
-    internal_graph: Graph<Rc<RefCell<dyn Node>>, (), Directed>,
+    pub(crate) internal_graph: Graph<Rc<RefCell<dyn Node>>, (), Directed>,
 
     output_node: NodeIndex,
 }
+
+unsafe impl Sync for Generator {}
+unsafe impl Send for Generator {}
 
 impl Generator {
     pub fn new() -> Self {
@@ -27,7 +31,7 @@ impl Generator {
             output_node: NodeIndex::new(0),
         };
 
-        g.output_node = g.add_node(crate::library::output::Output);
+        g.output_node = g.add_node(Output::new());
 
         g
     }
@@ -37,9 +41,7 @@ impl Generator {
     }
 
     pub fn add_node<N: Node + 'static>(&mut self, node: N) -> NodeIndex {
-        let node = Rc::new(RefCell::new(node));
-
-        self.internal_graph.add_node(node)
+        self.internal_graph.add_node(Rc::new(RefCell::new(node)))
     }
 
     pub fn add_edge(&mut self, link: Link) -> EdgeIndex {
@@ -47,11 +49,7 @@ impl Generator {
             .add_edge(link.input_node, link.output_node, ())
     }
 
-    pub fn generate(&self) -> Result<Plane> {
-        let side = 100;
-        let size = (side, side);
-        let mut plane = Plane::new(size.0 as u32, size.1 as u32)?;
-
+    pub fn connected_nodes_to_output(&self) -> Vec<Rc<RefCell<dyn Node>>> {
         let mut g = self.internal_graph.clone();
         g.reverse();
 
@@ -62,6 +60,15 @@ impl Generator {
         }
         used_nodes_for_output.reverse();
 
+        used_nodes_for_output
+    }
+
+    pub fn generate(&self, width: u32, height: u32) -> Result<Plane> {
+        let size = (width, height);
+        let mut plane = Plane::new(size.0, size.1)?;
+
+        let used_nodes_for_output = self.connected_nodes_to_output();
+
         for x in 0..size.0 {
             for y in 0..size.1 {
                 let mut value = InputOutputValue::Nothing;
@@ -71,8 +78,7 @@ impl Generator {
                 for node in &used_nodes_for_output {
                     let node = node.borrow();
 
-                    // TODO change that to something else so that we don't allocate a new string all the time when checking if the node is an `Output`
-                    if format!("{:?}", node).contains("Output") {
+                    if node.is_output() {
                         break;
                     }
                     value = node.generate(&pos, &size, value)?;
