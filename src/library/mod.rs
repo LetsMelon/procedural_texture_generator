@@ -1,4 +1,5 @@
 pub mod map;
+pub mod mix;
 pub mod noise;
 pub mod normalize;
 pub(crate) mod output;
