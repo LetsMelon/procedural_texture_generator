@@ -180,11 +180,11 @@ checksum = "8d7439c3735f405729d52c3fbbe4de140eaf938a1fe47d227c27f8254d4302a5"
 
 [[package]]
 name = "earcutr"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0812b44697951d35fde8fcb0da81c9de7e809e825a66bbf1ecb79d9829d4ca3d"
+checksum = "79127ed59a85d7687c409e9978547cffb7dc79675355ed22da6b66fd5f6ead01"
 dependencies = [
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "num-traits",
 ]
 
@@ -846,7 +846,7 @@ dependencies = [
 [[package]]
 name = "rusvid_core"
 version = "0.2.1"
-source = "git+https://github.com/LetsMelon/rusvid#768ced3664eedf2b98fd482ff9588c6475de4bd2"
+source = "git+https://github.com/LetsMelon/rusvid#16e118e8d45ef82120009211446d59017592defc"
 dependencies = [
  "approx",
  "concat-idents",
