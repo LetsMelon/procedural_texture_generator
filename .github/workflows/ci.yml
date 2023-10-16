@@ -117,5 +117,5 @@ jobs:
             target/
           key: ubuntu-latest-wasm32-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: check
-        run: cargo check --target wasm32-unknown-unknown
+      - name: build
+        run: cargo build --target wasm32-unknown-unknown
