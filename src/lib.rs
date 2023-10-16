@@ -5,29 +5,50 @@ pub mod input_output_value;
 pub mod library;
 pub mod link;
 pub mod node;
+pub(crate) mod utils;
 
+#[cfg(target_arch = "wasm32")]
 use std::sync::{Mutex, MutexGuard};
 
+#[cfg(target_arch = "wasm32")]
 use itertools::Itertools;
+#[cfg(target_arch = "wasm32")]
 use library::output::Output;
+#[cfg(target_arch = "wasm32")]
 use once_cell::sync::OnceCell;
+#[cfg(target_arch = "wasm32")]
 use petgraph::stable_graph::NodeIndex;
+#[cfg(target_arch = "wasm32")]
 use rusvid_core::prelude::{Pixel, Plane};
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::Clamped;
+#[cfg(target_arch = "wasm32")]
 use web_sys::{CanvasRenderingContext2d, ImageData};
 
+#[cfg(target_arch = "wasm32")]
 use crate::coordinate::Coordinate;
+#[cfg(target_arch = "wasm32")]
 use crate::generator::Generator;
+#[cfg(target_arch = "wasm32")]
 use crate::input_output_value::InputOutputValue;
+#[cfg(target_arch = "wasm32")]
 use crate::library::map::Map;
+#[cfg(target_arch = "wasm32")]
 use crate::library::noise::Noise;
+#[cfg(target_arch = "wasm32")]
 use crate::library::static_value::StaticValue;
+#[cfg(target_arch = "wasm32")]
 use crate::link::Link;
+#[cfg(target_arch = "wasm32")]
 use crate::node::Node;
 
+#[cfg(target_arch = "wasm32")]
 static GENERATOR: OnceCell<Mutex<Generator>> = OnceCell::new();
+#[cfg(target_arch = "wasm32")]
 static CACHED_GENERATOR_OUTPUT: OnceCell<Plane> = OnceCell::new();
+#[cfg(target_arch = "wasm32")]
 static SELECTED_NODE: Mutex<Option<NodeIndex>> = Mutex::new(None);
 
 #[cfg(target_arch = "wasm32")]
@@ -62,10 +83,7 @@ macro_rules! dbg {
     };
 }
 
-trait RenderNode {
-    fn render(&self, plane: &mut Plane) -> anyhow::Result<()>;
-}
-
+#[cfg(target_arch = "wasm32")]
 fn generator_mutex() -> &'static Mutex<Generator> {
     GENERATOR.get_or_init(|| {
         let mut generator = Generator::new();
@@ -109,111 +127,24 @@ fn generator_mutex() -> &'static Mutex<Generator> {
     })
 }
 
+#[cfg(target_arch = "wasm32")]
 fn get_generator() -> MutexGuard<'static, generator::Generator> {
     generator_mutex().lock().unwrap()
 }
 
+#[cfg(target_arch = "wasm32")]
 fn get_selected_node() -> MutexGuard<'static, Option<NodeIndex>> {
     SELECTED_NODE.lock().unwrap()
 }
 
+#[cfg(target_arch = "wasm32")]
 fn set_selected_node(value: Option<NodeIndex>) {
     let mut selected_node = SELECTED_NODE.lock().unwrap();
 
     *selected_node = value;
 }
 
-pub(crate) fn render_square(
-    plane: &mut Plane,
-    pos: (i64, i64),
-    size: (u32, u32),
-    color: Pixel,
-) -> anyhow::Result<()> {
-    // normalize the 'coordinates'
-
-    let from_x = (pos.0).max(0);
-    let to_x = (pos.0 + size.0 as i64).min(plane.height() as i64);
-
-    let from_y = (pos.1).max(0);
-    let to_y = (pos.1 + size.1 as i64).min(plane.width() as i64);
-
-    for x in from_x..to_x {
-        for y in from_y..to_y {
-            plane.put_pixel(x as u32, y as u32, color)?;
-        }
-    }
-
-    Ok(())
-}
-
-fn draw_circle(
-    plane: &mut Plane,
-    pos: (u32, u32),
-    color: Pixel,
-    radius: u32,
-) -> anyhow::Result<()> {
-    let radius = radius as i32;
-    let f_radius = radius as f32;
-
-    let width = plane.width();
-    let height = plane.height();
-
-    for (x, y) in ((radius * -1)..radius)
-        .cartesian_product((radius * -1)..radius)
-        .filter(|(delta_x, delta_y)| {
-            let xx = *delta_x as f32;
-            let yy = *delta_y as f32;
-
-            (xx.powf(2.0) + yy.powf(2.0)).sqrt() < f_radius
-        })
-        .map(|(delta_x, delta_y)| (pos.0 as i32 + delta_x, pos.1 as i32 + delta_y))
-        .filter(|(x, y)| !(*x < 0 || *y < 0 || *x > width as i32 || *y > height as i32))
-    {
-        plane.put_pixel(x as u32, y as u32, color)?;
-    }
-
-    Ok(())
-}
-
-fn draw_line(
-    plane: &mut Plane,
-    pos1: (i64, i64),
-    pos2: (i64, i64),
-    color: Pixel,
-    stroke_weight: u32,
-) -> anyhow::Result<()> {
-    let mut x1 = pos1.0 as i64;
-    let mut y1 = pos1.1 as i64;
-    let x2 = pos2.0 as i64;
-    let y2 = pos2.1 as i64;
-
-    let dx = (x2 - x1).abs();
-    let dy = (y2 - y1).abs();
-    let sx = if x1 < x2 { 1 } else { -1 };
-    let sy = if y1 < y2 { 1 } else { -1 };
-    let mut err = dx - dy;
-
-    while x1 != x2 || y1 != y2 {
-        if x1 > 0 && x1 <= plane.width() as i64 && y1 > 0 && y1 <= plane.height() as i64 {
-            // plane.put_pixel(x1 as u32, y1 as u32, color)?;
-            draw_circle(plane, (x1 as u32, y1 as u32), color, stroke_weight)?;
-        }
-
-        let e2 = 2 * err;
-        if e2 > -dy {
-            err -= dy;
-            x1 += sx;
-        }
-
-        if e2 < dx {
-            err += dx;
-            y1 += sy;
-        }
-    }
-
-    Ok(())
-}
-
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn move_node_to(node: usize, position_x: i64, position_y: i64) -> Result<(), JsValue> {
     println!("Move node {:?} to {:?}", &node, (position_x, position_y));
@@ -231,6 +162,7 @@ pub fn move_node_to(node: usize, position_x: i64, position_y: i64) -> Result<(),
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn move_node(node: usize, delta_x: i64, delta_y: i64) -> Result<(), JsValue> {
     println!("Move node: {:?}, {:?}", &node, (delta_x, delta_y));
@@ -251,6 +183,7 @@ pub fn move_node(node: usize, delta_x: i64, delta_y: i64) -> Result<(), JsValue>
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn nodes(ctx: &CanvasRenderingContext2d, width: u32, height: u32) -> Result<(), JsValue> {
     println!("Nodes call:");
@@ -330,6 +263,7 @@ pub fn nodes(ctx: &CanvasRenderingContext2d, width: u32, height: u32) -> Result<
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn canvas_click(
     _ctx: &CanvasRenderingContext2d,
@@ -390,11 +324,13 @@ pub fn canvas_click(
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn canvas_click_active() -> Option<usize> {
     get_selected_node().map(|item| item.index())
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn init() {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));

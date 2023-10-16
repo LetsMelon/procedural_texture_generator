@@ -7,7 +7,7 @@ use crate::bitmap::BitmapChar;
 use crate::coordinate::Coordinate;
 use crate::input_output_value::InputOutputValue;
 use crate::node::{Node, SpaceInfo};
-use crate::render_square;
+use crate::utils::render_square;
 
 #[derive(Debug)]
 pub struct Noise {

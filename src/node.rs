@@ -7,7 +7,7 @@ use rusvid_core::plane::Plane;
 use crate::bitmap::BitmapChar;
 use crate::coordinate::Coordinate;
 use crate::input_output_value::InputOutputValue;
-use crate::render_square;
+use crate::utils::render_square;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpaceInfo {
