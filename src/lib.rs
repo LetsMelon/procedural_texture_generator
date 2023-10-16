@@ -43,6 +43,8 @@ use crate::library::static_value::StaticValue;
 use crate::link::Link;
 #[cfg(target_arch = "wasm32")]
 use crate::node::Node;
+#[cfg(target_arch = "wasm32")]
+use crate::utils::{draw_circle, draw_line, render_square};
 
 #[cfg(target_arch = "wasm32")]
 static GENERATOR: OnceCell<Mutex<Generator>> = OnceCell::new();
