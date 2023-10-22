@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use anyhow::Result;
@@ -11,12 +12,13 @@ use crate::coordinate::Coordinate;
 use crate::input_output_value::InputOutputValue;
 use crate::library::output::Output;
 use crate::link::Link;
-use crate::node::Node;
+use crate::node::{Node, SpaceInfo};
 
 #[derive(Debug)]
 pub struct Generator {
     pub(crate) internal_graph: Graph<Rc<RefCell<dyn Node>>, (), Directed>,
 
+    named_links: HashMap<Link, String>,
     output_node: NodeIndex,
 }
 
@@ -27,6 +29,8 @@ impl Generator {
     pub fn new() -> Self {
         let mut g = Generator {
             internal_graph: Graph::new(),
+
+            named_links: HashMap::new(),
             // TODO maybe use an option for this because we set this value in the following lines and '0' is a fake value
             output_node: NodeIndex::new(0),
         };
@@ -44,9 +48,19 @@ impl Generator {
         self.internal_graph.add_node(Rc::new(RefCell::new(node)))
     }
 
-    pub fn add_edge(&mut self, link: Link) -> EdgeIndex {
-        self.internal_graph
-            .add_edge(link.input_node, link.output_node, ())
+    pub fn add_edge(&mut self, link: Link) -> (EdgeIndex, String) {
+        self.add_edge_named(link, "_")
+    }
+
+    pub fn add_edge_named<S: Into<String>>(&mut self, link: Link, name: S) -> (EdgeIndex, String) {
+        let name: String = name.into();
+        self.named_links.insert(link.clone(), name.clone());
+
+        (
+            self.internal_graph
+                .add_edge(link.input_node, link.output_node, ()),
+            name,
+        )
     }
 
     pub fn connected_nodes_to_output(&self) -> Vec<Rc<RefCell<dyn Node>>> {
@@ -68,6 +82,8 @@ impl Generator {
         let mut plane = Plane::new(size.0, size.1)?;
 
         let used_nodes_for_output = self.connected_nodes_to_output();
+
+        dbg!(&used_nodes_for_output);
 
         for x in 0..size.0 {
             for y in 0..size.1 {
@@ -125,3 +141,87 @@ fn save_graph<P: AsRef<std::path::Path>, U: std::fmt::Debug, V: std::fmt::Debug>
     }
 }
  */
+
+/*
+Output
+    Mix
+        StaticValue
+        Noise
+        StaticValue
+*/
+#[derive(Debug)]
+pub struct RelationsBetweenNodes {
+    node: Rc<RefCell<dyn Node>>,
+    children: Vec<(RelationsBetweenNodes, String)>,
+}
+
+impl RelationsBetweenNodes {
+    pub fn new(node: Rc<RefCell<dyn Node>>) -> Self {
+        RelationsBetweenNodes {
+            node,
+            children: Vec::new(),
+        }
+    }
+
+    pub fn add_children<S: Into<String>>(&mut self, node: RelationsBetweenNodes, name: S) {
+        self.children.push((node, name.into()))
+    }
+}
+
+impl Node for RelationsBetweenNodes {
+    fn generate(
+        &self,
+        position: &Coordinate,
+        size: &(u32, u32),
+        input: &[InputOutputValue],
+    ) -> Result<InputOutputValue> {
+        todo!()
+    }
+
+    fn space_info(&self) -> &SpaceInfo {
+        todo!()
+    }
+
+    fn space_info_mut(&mut self) -> &mut SpaceInfo {
+        todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    use rusvid_core::prelude::Pixel;
+
+    use super::RelationsBetweenNodes;
+    use crate::input_output_value::InputOutputValue;
+    use crate::library::noise::Noise;
+    use crate::library::output::Output;
+    use crate::library::static_value::StaticValue;
+
+    #[test]
+    fn just_works() {
+        let rbn = RelationsBetweenNodes {
+            node: Rc::new(RefCell::new(Output::new())),
+            children: vec![
+                (
+                    RelationsBetweenNodes::new(Rc::new(RefCell::new(StaticValue::new(
+                        InputOutputValue::Float(0.5),
+                    )))),
+                    "value".to_string(),
+                ),
+                (
+                    RelationsBetweenNodes::new(Rc::new(RefCell::new(StaticValue::new(
+                        InputOutputValue::Pixel(Pixel::new(255, 0, 100, 255)),
+                    )))),
+                    "input1".to_string(),
+                ),
+                (
+                    RelationsBetweenNodes::new(Rc::new(RefCell::new(Noise::new(1)))),
+                    "input2".to_string(),
+                ),
+            ],
+        };
+    }
+}

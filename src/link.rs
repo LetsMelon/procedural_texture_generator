@@ -7,7 +7,7 @@ use crate::node::Node;
 
 pub type LinkNode = Rc<RefCell<dyn Node>>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Hash)]
 pub struct Link {
     pub(crate) input_node: NodeIndex,
     pub(crate) output_node: NodeIndex,

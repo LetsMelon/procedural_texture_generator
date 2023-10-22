@@ -65,3 +65,36 @@ impl Node for Mix {
         &mut self.space_info
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rusvid_core::prelude::Pixel;
+
+    use super::Mix;
+    use crate::generator::Generator;
+    use crate::input_output_value::InputOutputValue;
+    use crate::library::noise::Noise;
+    use crate::library::static_value::StaticValue;
+    use crate::link::Link;
+
+    #[test]
+    fn just_works() {
+        let mut generator = Generator::new();
+
+        let id_mix = generator.add_node(Mix::new());
+        let id_static_mix_factor =
+            generator.add_node(StaticValue::new(InputOutputValue::Float(0.5)));
+        let id_static_color = generator.add_node(StaticValue::new(InputOutputValue::Pixel(
+            Pixel::new(255, 0, 100, 255),
+        )));
+        let id_noise = generator.add_node(Noise::new(1));
+        let id_output = generator.output_node();
+
+        generator.add_edge_named(Link::new(id_static_mix_factor, id_mix), "value");
+        generator.add_edge_named(Link::new(id_static_color, id_mix), "input1");
+        generator.add_edge_named(Link::new(id_noise, id_mix), "input2");
+        generator.add_edge(Link::new(id_mix, id_output));
+
+        let _ = generator.generate(100, 100).unwrap();
+    }
+}
