@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use anyhow::Result;
@@ -37,7 +38,7 @@ pub trait Node: std::fmt::Debug {
         &self,
         position: &Coordinate,
         size: &(u32, u32),
-        input: InputOutputValue,
+        input: HashMap<String, InputOutputValue>,
     ) -> Result<InputOutputValue>;
 
     fn is_output(&self) -> bool {

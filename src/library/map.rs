@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use itertools::Itertools;
 use rusvid_core::pixel::Pixel;
@@ -34,12 +36,14 @@ impl Node for Map {
         &self,
         _position: &Coordinate,
         _size: &(u32, u32),
-        input: InputOutputValue,
+        input: HashMap<String, InputOutputValue>,
     ) -> Result<InputOutputValue> {
+        let (_, first_input) = input.iter().next().unwrap();
+
         // TODO copy method for the windows of the `self.steps`` from `render`
-        let r = input.r_percentage()?;
-        let g = input.g_percentage()?;
-        let b = input.b_percentage()?;
+        let r = first_input.r_percentage()?;
+        let g = first_input.g_percentage()?;
+        let b = first_input.b_percentage()?;
         let avg = (r + g + b) / 3.0;
 
         // TODO the following functions should always return at least something because of `len(self.steps) >= 2`

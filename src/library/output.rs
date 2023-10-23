@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use rusvid_core::prelude::{Pixel, Plane, ResizeMode};
 
@@ -44,9 +46,9 @@ impl Node for Output {
         &self,
         _position: &Coordinate,
         _size: &(u32, u32),
-        _input: InputOutputValue,
+        _input: HashMap<String, InputOutputValue>,
     ) -> Result<InputOutputValue> {
-        todo!()
+        unreachable!()
     }
 
     fn is_output(&self) -> bool {
