@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 
 use crate::coordinate::Coordinate;
@@ -26,7 +28,7 @@ impl Node for StaticValue {
         &self,
         _position: &Coordinate,
         _size: &(u32, u32),
-        _input: &[InputOutputValue],
+        _input: HashMap<String, InputOutputValue>,
     ) -> Result<InputOutputValue> {
         Ok(self.value)
     }
@@ -42,6 +44,8 @@ impl Node for StaticValue {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use rusvid_core::pixel::Pixel;
 
     use super::StaticValue;
@@ -60,12 +64,8 @@ mod tests {
         for value_to_test in values_to_test {
             let node = StaticValue::new(value_to_test);
             assert_eq!(
-                node.generate(
-                    &Coordinate::new_x(0.0),
-                    &(0, 0),
-                    &[InputOutputValue::Nothing]
-                )
-                .unwrap(),
+                node.generate(&Coordinate::new_x(0.0), &(0, 0), HashMap::new())
+                    .unwrap(),
                 value_to_test
             );
         }

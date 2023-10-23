@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use noise::{NoiseFn, Perlin};
 use rusvid_core::pixel::Pixel;
@@ -52,7 +54,7 @@ impl Node for Noise {
         &self,
         position: &Coordinate,
         size: &(u32, u32),
-        _input: &[InputOutputValue],
+        _input: HashMap<String, InputOutputValue>,
     ) -> Result<InputOutputValue> {
         let value = self.perlin.get([
             (((position.x()) / ((size.0 - 1) as f64)) + self.offset.x()) * self.scale.x(),

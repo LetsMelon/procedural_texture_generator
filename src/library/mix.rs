@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use rusvid_core::prelude::Pixel;
 
@@ -23,12 +25,16 @@ impl Node for Mix {
         &self,
         _position: &Coordinate,
         _size: &(u32, u32),
-        input: &[InputOutputValue],
+        input: HashMap<String, InputOutputValue>,
     ) -> Result<InputOutputValue> {
         assert_eq!(input.len(), 3);
 
+        let value = input.get("value").unwrap().clone();
+        let input1 = input.get("input1").unwrap().clone();
+        let input2 = input.get("input2").unwrap().clone();
+
         // `delta` must be from type `InputOutputValue::Float`
-        let deltas = match input[2] {
+        let deltas = match value {
             InputOutputValue::Float(value) => [value, value, value, value],
             InputOutputValue::Nothing
             | InputOutputValue::Pixel(_)
@@ -38,12 +44,12 @@ impl Node for Mix {
             InputOutputValue::F64X4Array(values) => [values[0], values[1], values[2], values[3]],
         };
 
-        let values = input[0]
+        let values = input1
             .to_common_ground()?
             .to_raw_float()
             .map(|item| item as f64)
             .zip(
-                input[1]
+                input2
                     .to_common_ground()?
                     .to_raw_float()
                     .map(|item| item as f64),

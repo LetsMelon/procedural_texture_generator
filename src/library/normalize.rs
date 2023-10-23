@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use rusvid_core::prelude::Pixel;
 
@@ -28,9 +30,11 @@ impl Node for Normalize {
         &self,
         _position: &Coordinate,
         _size: &(u32, u32),
-        input: &[InputOutputValue],
+        input: HashMap<String, InputOutputValue>,
     ) -> Result<InputOutputValue> {
-        let raw = input[0].to_common_ground()?.to_raw();
+        let (_, first_input) = input.iter().next().unwrap();
+
+        let raw = first_input.to_common_ground()?.to_raw();
 
         let values = raw
             .iter()
