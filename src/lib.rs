@@ -36,6 +36,8 @@ use crate::input_output_value::InputOutputValue;
 #[cfg(target_arch = "wasm32")]
 use crate::library::map::Map;
 #[cfg(target_arch = "wasm32")]
+use crate::library::mix::Mix;
+#[cfg(target_arch = "wasm32")]
 use crate::library::noise::Noise;
 #[cfg(target_arch = "wasm32")]
 use crate::library::static_value::StaticValue;
@@ -89,39 +91,36 @@ macro_rules! dbg {
 fn generator_mutex() -> &'static Mutex<Generator> {
     GENERATOR.get_or_init(|| {
         let mut generator = Generator::new();
+
+        let node_mix = generator.add_node({
+            let mut m = Mix::new();
+            m.space_info_mut().name = "Mix".to_string();
+            m
+        });
         let node_noise = generator.add_node({
             let mut n = Noise::new(1);
 
-            n.set_scale(Coordinate::new(8.0, 8.0, 1.0));
-            n.set_offset(Coordinate::new(0.0, 0.0, 0.0));
+            let scale = 10.0;
+            n.set_scale(Coordinate::new_xy(scale, scale));
 
             n.space_info_mut().name = "Noise".to_string();
 
             n
         });
-        let node_map = generator.add_node({
-            let mut n = Map::new(vec![
-                (InputOutputValue::Pixel(Pixel::new(0, 0, 100, 255)), 0.20),
-                (InputOutputValue::Pixel(Pixel::new(100, 0, 0, 255)), 0.30),
-                (InputOutputValue::Pixel(Pixel::new(0, 100, 100, 255)), 0.50),
-                (InputOutputValue::Pixel(Pixel::new(255, 255, 0, 255)), 1.0),
-            ]);
-
-            n.space_info_mut().name = "Map".to_string();
-
-            n
-        });
-        let _node_static = generator.add_node(StaticValue::new(InputOutputValue::Pixel(
-            Pixel::new(255, 100, 0, 255),
+        let node_input1 = generator.add_node(StaticValue::new(InputOutputValue::Pixel(
+            Pixel::new(255, 0, 100, 255),
+        )));
+        let node_input2 = generator.add_node(StaticValue::new(InputOutputValue::Pixel(
+            Pixel::new(0, 255, 150, 255),
         )));
         let node_output = generator.output_node();
 
         println!("Created nodes");
 
-        // generator.add_edge(Link::new(node_noise, node_output));
-        generator.add_edge(Link::new(node_noise, node_map));
-        generator.add_edge(Link::new(node_map, node_output));
-        // generator.add_edge(Link::new(node_static, node_output));
+        generator.add_edge_named(Link::new(node_noise, node_mix), "value");
+        generator.add_edge_named(Link::new(node_input1, node_mix), "input1");
+        generator.add_edge_named(Link::new(node_input2, node_mix), "input2");
+        generator.add_edge(Link::new(node_mix, node_output));
 
         println!("Added links");
 
