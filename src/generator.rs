@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use anyhow::Result;
+use petgraph::data::FromElements;
 use petgraph::stable_graph::{EdgeIndex, NodeIndex};
 use petgraph::visit::Dfs;
 use petgraph::{Directed, Graph};
@@ -12,7 +13,7 @@ use crate::coordinate::Coordinate;
 use crate::input_output_value::InputOutputValue;
 use crate::library::output::Output;
 use crate::link::Link;
-use crate::node::{Node, SpaceInfo};
+use crate::node::Node;
 
 #[derive(Debug)]
 pub struct Generator {
@@ -48,19 +49,16 @@ impl Generator {
         self.internal_graph.add_node(Rc::new(RefCell::new(node)))
     }
 
-    pub fn add_edge(&mut self, link: Link) -> (EdgeIndex, String) {
+    pub fn add_edge(&mut self, link: Link) -> EdgeIndex {
         self.add_edge_named(link, "_")
     }
 
-    pub fn add_edge_named<S: Into<String>>(&mut self, link: Link, name: S) -> (EdgeIndex, String) {
+    pub fn add_edge_named<S: Into<String>>(&mut self, link: Link, name: S) -> EdgeIndex {
         let name: String = name.into();
-        self.named_links.insert(link.clone(), name.clone());
+        self.named_links.insert(link.clone(), name);
 
-        (
-            self.internal_graph
-                .add_edge(link.input_node, link.output_node, ()),
-            name,
-        )
+        self.internal_graph
+            .add_edge(link.input_node, link.output_node, ())
     }
 
     pub fn connected_nodes_to_output(&self) -> Vec<Rc<RefCell<dyn Node>>> {
@@ -77,28 +75,66 @@ impl Generator {
         used_nodes_for_output
     }
 
+    fn nodes_as_tree(&self) -> Option<RelationsBetweenNodes> {
+        let mst = petgraph::graph::DiGraph::<_, _>::from_elements(
+            petgraph::algo::min_spanning_tree(&self.internal_graph),
+        );
+
+        let mut map: HashMap<NodeIndex, RelationsBetweenNodes> = HashMap::new();
+
+        for edge in mst.raw_edges() {
+            let source = edge.source();
+            let target = edge.target();
+
+            let source_tree = match map.get(&source) {
+                Some(item) => item.clone(),
+                None => {
+                    let node = mst.node_weight(source).unwrap().clone();
+
+                    let rbn = RelationsBetweenNodes::new(node);
+                    map.insert(source, rbn.clone());
+
+                    rbn
+                }
+            };
+
+            let mut target_tree = match map.get(&target) {
+                Some(item) => item.clone(),
+                None => {
+                    let node = mst.node_weight(target).unwrap().clone();
+
+                    let rbn = RelationsBetweenNodes::new(node);
+                    map.insert(target, rbn.clone());
+
+                    rbn
+                }
+            };
+
+            target_tree.add_children(
+                source_tree,
+                self.named_links.get(&Link::new(source, target)).unwrap(),
+            );
+
+            if target_tree.node.borrow().is_output() {
+                return Some(target_tree);
+            }
+
+            map.insert(target, target_tree);
+        }
+
+        return None;
+    }
+
     pub fn generate(&self, width: u32, height: u32) -> Result<Plane> {
         let size = (width, height);
         let mut plane = Plane::new(size.0, size.1)?;
 
-        let used_nodes_for_output = self.connected_nodes_to_output();
-
-        dbg!(&used_nodes_for_output);
+        let nodes_as_tree = self.nodes_as_tree().unwrap();
 
         for x in 0..size.0 {
             for y in 0..size.1 {
-                let mut value = InputOutputValue::Nothing;
-
-                let pos = Coordinate::new_xy(x as f64, y as f64);
-
-                for node in &used_nodes_for_output {
-                    let node = node.borrow();
-
-                    if node.is_output() {
-                        break;
-                    }
-                    value = node.generate(&pos, &size, &[value])?;
-                }
+                let value =
+                    nodes_as_tree.generate(&Coordinate::new_xy(x as f64, y as f64), &size)?;
 
                 plane.put_pixel_unchecked(x as u32, y as u32, value.to_common_ground()?);
             }
@@ -108,120 +144,112 @@ impl Generator {
     }
 }
 
-/*
-fn save_graph<P: AsRef<std::path::Path>, U: std::fmt::Debug, V: std::fmt::Debug>(
-    g: &Graph<U, V>,
-    path: P,
-) -> Result<()> {
-    use std::io::Write;
-
-    let mut dot_child = std::process::Command::new("dot")
-        .arg("-Tpng")
-        .args(["-o", path.as_ref().to_str().unwrap()])
-        .stdin(std::process::Stdio::piped())
-        .spawn()?;
-
-    let child_stdin = dot_child.stdin.as_mut().unwrap();
-    write!(
-        child_stdin,
-        "{:?}",
-        petgraph::dot::Dot::with_config(g, &[petgraph::dot::Config::EdgeNoLabel])
-    )?;
-    let _ = child_stdin;
-
-    let output = dot_child.wait_with_output()?;
-
-    if !output.status.success() {
-        anyhow::bail!(
-            "Exited binary `dot` with an error.\nerr: {:?}",
-            output.stderr
-        )
-    } else {
-        Ok(())
-    }
-}
- */
-
-/*
-Output
-    Mix
-        StaticValue
-        Noise
-        StaticValue
-*/
-#[derive(Debug)]
-pub struct RelationsBetweenNodes {
+#[derive(Debug, Clone)]
+struct RelationsBetweenNodes {
     node: Rc<RefCell<dyn Node>>,
     children: Vec<(RelationsBetweenNodes, String)>,
 }
 
 impl RelationsBetweenNodes {
-    pub fn new(node: Rc<RefCell<dyn Node>>) -> Self {
+    fn new(node: Rc<RefCell<dyn Node>>) -> Self {
         RelationsBetweenNodes {
             node,
             children: Vec::new(),
         }
     }
 
-    pub fn add_children<S: Into<String>>(&mut self, node: RelationsBetweenNodes, name: S) {
+    fn add_children<S: Into<String>>(&mut self, node: RelationsBetweenNodes, name: S) {
         self.children.push((node, name.into()))
     }
-}
 
-impl Node for RelationsBetweenNodes {
-    fn generate(
-        &self,
-        position: &Coordinate,
-        size: &(u32, u32),
-        input: &[InputOutputValue],
-    ) -> Result<InputOutputValue> {
-        todo!()
-    }
+    fn generate(&self, position: &Coordinate, size: &(u32, u32)) -> Result<InputOutputValue> {
+        let mut children_results = HashMap::new();
 
-    fn space_info(&self) -> &SpaceInfo {
-        todo!()
-    }
+        for (child_node, child_name) in &self.children {
+            let out = child_node.generate(position, size)?;
 
-    fn space_info_mut(&mut self) -> &mut SpaceInfo {
-        todo!()
+            if self.node.borrow().is_output() {
+                return Ok(out);
+            }
+
+            children_results.insert(child_name.clone(), out);
+        }
+
+        self.node
+            .borrow()
+            .generate(position, size, children_results)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
-    use std::rc::Rc;
+    use rusvid_core::pixel::Pixel;
 
-    use rusvid_core::prelude::Pixel;
-
-    use super::RelationsBetweenNodes;
+    use super::Generator;
+    use crate::coordinate::Coordinate;
     use crate::input_output_value::InputOutputValue;
+    use crate::library::mix::Mix;
     use crate::library::noise::Noise;
-    use crate::library::output::Output;
     use crate::library::static_value::StaticValue;
+    use crate::link::Link;
 
     #[test]
-    fn just_works() {
-        let rbn = RelationsBetweenNodes {
-            node: Rc::new(RefCell::new(Output::new())),
-            children: vec![
-                (
-                    RelationsBetweenNodes::new(Rc::new(RefCell::new(StaticValue::new(
-                        InputOutputValue::Float(0.5),
-                    )))),
-                    "value".to_string(),
-                ),
-                (
-                    RelationsBetweenNodes::new(Rc::new(RefCell::new(StaticValue::new(
-                        InputOutputValue::Pixel(Pixel::new(255, 0, 100, 255)),
-                    )))),
-                    "input1".to_string(),
-                ),
-                (
-                    RelationsBetweenNodes::new(Rc::new(RefCell::new(Noise::new(1)))),
-                    "input2".to_string(),
-                ),
-            ],
-        };
+    fn a_node_can_have_more_than_one_inputs() {
+        let mut g = Generator::new();
+
+        let node_mix = g.add_node(Mix::new());
+        let node_noise = g.add_node({
+            let mut n = Noise::new(1);
+
+            let scale = 10.0;
+
+            n.set_scale(Coordinate::new_xy(scale, scale));
+
+            n
+        });
+        let node_input1 = g.add_node(StaticValue::new(InputOutputValue::Pixel(Pixel::new(
+            255, 0, 100, 255,
+        ))));
+        let node_input2 = g.add_node(StaticValue::new(InputOutputValue::Pixel(Pixel::new(
+            0, 255, 150, 255,
+        ))));
+        let node_output = g.output_node();
+
+        g.add_edge_named(Link::new(node_noise, node_mix), "value");
+        g.add_edge_named(Link::new(node_input1, node_mix), "input1");
+        g.add_edge_named(Link::new(node_input2, node_mix), "input2");
+        g.add_edge(Link::new(node_mix, node_output));
+
+        let plane = g.generate(10, 10).unwrap();
+
+        // TODO maybe add a crate for snapshot testing
+        assert_eq!(
+            plane.as_data_flatten(),
+            vec![
+                0, 255, 150, 255, 3, 251, 149, 255, 0, 255, 161, 255, 0, 255, 158, 254, 143, 111,
+                121, 255, 14, 240, 147, 255, 36, 218, 142, 254, 0, 255, 153, 255, 32, 222, 143,
+                254, 0, 255, 150, 255, 0, 255, 155, 254, 35, 219, 143, 255, 0, 255, 156, 254, 0,
+                255, 156, 255, 44, 210, 141, 255, 0, 255, 178, 255, 119, 135, 126, 255, 0, 255,
+                164, 255, 0, 255, 155, 255, 3, 251, 149, 255, 0, 255, 158, 254, 12, 242, 147, 255,
+                39, 215, 142, 255, 76, 178, 134, 255, 0, 255, 150, 255, 0, 255, 151, 254, 0, 255,
+                156, 255, 0, 255, 164, 254, 46, 208, 140, 255, 0, 255, 158, 254, 0, 255, 157, 255,
+                98, 156, 130, 255, 0, 255, 160, 254, 0, 255, 151, 255, 161, 93, 118, 255, 59, 195,
+                138, 255, 36, 218, 142, 255, 51, 203, 139, 254, 0, 255, 173, 255, 0, 255, 157, 255,
+                0, 255, 152, 255, 0, 255, 168, 255, 0, 255, 159, 255, 0, 255, 155, 255, 34, 220,
+                143, 255, 0, 255, 157, 254, 105, 149, 129, 255, 23, 231, 145, 255, 69, 185, 136,
+                255, 0, 255, 152, 255, 14, 240, 147, 255, 148, 106, 120, 255, 78, 176, 134, 255, 0,
+                255, 160, 255, 222, 32, 106, 255, 0, 255, 173, 254, 0, 255, 164, 255, 0, 255, 160,
+                255, 0, 255, 168, 255, 14, 240, 147, 255, 0, 255, 173, 255, 0, 255, 171, 255, 0,
+                255, 158, 255, 60, 194, 138, 255, 115, 139, 127, 255, 85, 169, 133, 255, 0, 255,
+                156, 254, 121, 133, 126, 255, 0, 255, 157, 255, 36, 218, 142, 254, 77, 177, 134,
+                255, 77, 177, 134, 255, 66, 188, 137, 255, 0, 255, 171, 255, 121, 133, 126, 255, 0,
+                255, 154, 255, 0, 255, 156, 255, 0, 255, 155, 254, 0, 255, 164, 255, 42, 212, 141,
+                255, 0, 255, 156, 254, 0, 255, 150, 254, 29, 225, 144, 255, 71, 183, 135, 255, 0,
+                255, 163, 254, 0, 255, 168, 255, 11, 243, 147, 255, 30, 224, 144, 255, 63, 191,
+                137, 255, 0, 255, 150, 254, 0, 255, 150, 255, 32, 222, 143, 255, 17, 237, 146, 255,
+                0, 255, 165, 255, 0, 255, 162, 255, 64, 190, 137, 255, 0, 255, 150, 255, 0, 255,
+                150, 255, 0, 255, 150, 255, 0, 255, 150, 255,
+            ]
+        );
     }
 }
