@@ -4,15 +4,34 @@
     <link rel="stylesheet" href="styles/normalize.css" />
     <link rel="stylesheet" href="styles/skeleton.css" />
     <link rel="stylesheet" href="styles/style.css" />
+
+    <style>
+      #canvas_bg {
+        width: 750;
+        height: 750;
+
+        background-color: #f7f7f7;
+        opacity: 0.7;
+        background-image: radial-gradient(#000000 0.7px, #f7f7f7 0.7px);
+        background-size: 15px 15px;
+
+        border-radius: 15px;
+        border: 1px solid #000000;
+
+        overflow: hidden;
+      }
+    </style>
   </head>
   <body>
     <main>
-      <canvas
-        id="nodes"
-        width="750"
-        height="750"
-        style="image-rendering: pixelated"
-      ></canvas>
+      <div id="canvas_bg">
+        <canvas
+          id="nodes"
+          width="750"
+          height="750"
+          style="image-rendering: pixelated"
+        ></canvas>
+      </div>
     </main>
   </body>
 </html>
