@@ -846,7 +846,7 @@ dependencies = [
 [[package]]
 name = "rusvid_core"
 version = "0.2.1"
-source = "git+https://github.com/LetsMelon/rusvid#16e118e8d45ef82120009211446d59017592defc"
+source = "git+https://github.com/LetsMelon/rusvid#9a701dd3a8569c1fb79dabd34a5742ffddfbf7e9"
 dependencies = [
  "approx",
  "concat-idents",
