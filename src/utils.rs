@@ -13,10 +13,10 @@ pub fn render_square(
     // normalize the 'coordinates'
 
     let from_x = (pos.0).max(0);
-    let to_x = (pos.0 + size.0 as i64).min(plane.height() as i64);
+    let to_x = (pos.0 + size.0 as i64).min(plane.width() as i64);
 
     let from_y = (pos.1).max(0);
-    let to_y = (pos.1 + size.1 as i64).min(plane.width() as i64);
+    let to_y = (pos.1 + size.1 as i64).min(plane.height() as i64);
 
     for x in from_x..to_x {
         for y in from_y..to_y {

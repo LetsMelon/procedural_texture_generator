@@ -55,28 +55,39 @@ impl InputOutputValue {
         }
     }
 
-    pub fn r_percentage(&self) -> Result<f64> {
+    pub fn percentages(&self) -> Result<[f64; 4]> {
         let p = self.to_common_ground()?;
 
-        Ok((p.get_r() as f64) / 255.0)
+        Ok([
+            p.get_r() as f64 / 255.0,
+            p.get_g() as f64 / 255.0,
+            p.get_b() as f64 / 255.0,
+            p.get_a() as f64 / 255.0,
+        ])
+    }
+
+    pub fn r_percentage(&self) -> Result<f64> {
+        let ps = self.percentages()?;
+
+        Ok(ps[0])
     }
 
     pub fn g_percentage(&self) -> Result<f64> {
-        let p = self.to_common_ground()?;
+        let ps = self.percentages()?;
 
-        Ok((p.get_g() as f64) / 255.0)
+        Ok(ps[1])
     }
 
     pub fn b_percentage(&self) -> Result<f64> {
-        let p = self.to_common_ground()?;
+        let ps = self.percentages()?;
 
-        Ok((p.get_b() as f64) / 255.0)
+        Ok(ps[2])
     }
 
     pub fn a_percentage(&self) -> Result<f64> {
-        let p = self.to_common_ground()?;
+        let ps = self.percentages()?;
 
-        Ok((p.get_a() as f64) / 255.0)
+        Ok(ps[3])
     }
 }
 

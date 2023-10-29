@@ -1,10 +1,15 @@
 import("./pkg")
   .then((wasm) => {
     const canvas = document.getElementById("nodes");
+    const canvas_bg = document.getElementById("canvas_bg");
+    const nodes_width = canvas_bg.clientWidth;
+    const nodes_height = canvas_bg.clientHeight;
+    canvas.width = nodes_width;
+    canvas.height = nodes_height;
+
     const ctx_nodes = canvas.getContext("2d");
 
-    const nodes_width = canvas.width;
-    const nodes_height = canvas.height;
+    console.log({ nodes_width, nodes_height });
 
     wasm.init();
 
