@@ -1,3 +1,4 @@
+pub mod invert;
 pub mod map;
 pub mod mix;
 pub mod noise;
