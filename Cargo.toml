@@ -13,7 +13,7 @@ anyhow = "1.0.75"
 noise = "0.8.2"
 petgraph = "0.6.4"
 rusvid_core = { git = "https://github.com/LetsMelon/rusvid" }
-itertools = "0.11.0"
+itertools = "0.12.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.7"
