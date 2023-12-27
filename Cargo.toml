@@ -9,7 +9,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.77"
 noise = "0.8.2"
 petgraph = "0.6.4"
 rusvid_core = { git = "https://github.com/LetsMelon/rusvid" }
